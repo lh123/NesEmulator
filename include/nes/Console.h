@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "nes/CPU.h"
+#include "nes/PPU.h"
 #include "nes/Cartridge.h"
 #include "nes/Mapper.h"
 
@@ -19,6 +20,7 @@ public:
 
 public:
     CPU *cpu;
+    PPU *ppu;
     Cartridge *cartridge;
     Mapper *mapper;
     

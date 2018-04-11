@@ -1,11 +1,11 @@
 #include "nes/Cartridge.h"
 
+#include <cstdio>
 #include <cstring>
-#include <iostream>
 
 const uint32_t NesMagic = 0x1a53454e;
 
-Cartridge::Cartridge(): sram{0} {}
+Cartridge::Cartridge() : sram{0} {}
 
 Cartridge::~Cartridge() {
     delete[] chr;
@@ -20,12 +20,12 @@ Cartridge::~Cartridge() {
 bool Cartridge::loadNesFile(const char *path) {
     std::FILE *file = std::fopen(path, "rb");
     if (file == nullptr) {
-        std::cout << "open file \"" << path << "\" failed!" << std::endl;
+        std::printf("open file \"%s\" failed!\n");
         return false;
     }
     std::fread(&header.magic, sizeof(header.magic), 1, file);
     if (header.magic != NesMagic) {
-        std::cout << "invalid nes file!" << std::endl;
+        std::printf("invalid nes file!\n");
         return false;
     }
 
@@ -38,7 +38,7 @@ bool Cartridge::loadNesFile(const char *path) {
     std::fread(padding, sizeof(padding), 1, file);
     for (int i = 0; i < 7; i++) {
         if (padding[i] != 0) {
-            std::cout << "invalid nes file!" << std::endl;
+            std::printf("invalid nes file!\n");
             return false;
         }
     }
@@ -50,14 +50,20 @@ bool Cartridge::loadNesFile(const char *path) {
     trainer = (header.controller1 & 0x4) == 0x4;
 
     if (trainer) {
-        std::cout << "current not support trainer" << std::endl;
+        std::printf("current not support trainer\n");
         return false;
     }
+
+    prgBanks = header.numPRG;
+    prgBank1 = 0;
+    prgBank2 = prgBanks - 1;
 
     prg = new uint8_t[header.numPRG * 16384];
     std::fread(prg, header.numPRG * 16384, 1, file);
 
-    //provide chr if not in file
+    chrBanks = header.numCHR;
+    chrBank = 0;
+    // provide chr if not in file
     if (header.numCHR != 0) {
         chr = new uint8_t[header.numCHR * 8192];
         std::fread(chr, header.numCHR * 8192, 1, file);
@@ -71,7 +77,7 @@ bool Cartridge::loadNesFile(const char *path) {
 }
 
 uint8_t Cartridge::read(uint16_t address) {
-    if(address < 0x2000) {
+    if (address < 0x2000) {
         return chr[address];
     } else if (address >= 0x8000) {
         uint16_t index = (address - 0x8000) % (header.numPRG * 16384);
@@ -79,20 +85,40 @@ uint8_t Cartridge::read(uint16_t address) {
     } else if (address >= 0x6000) {
         uint16_t index = address - 0x6000;
         return sram[index];
+    } else {
+        std::printf("error: cartridge read at address: %04X\n", address);
+        return 0;
     }
-    std::printf("error: cartridge read at address: %04X\n", address);
-    return 0;
 }
 
 void Cartridge::write(uint16_t address, uint8_t value) {
-    if(address < 0x2000) {
+    if (address < 0x2000) {
         chr[address] = value;
     } else if (address >= 0x8000) {
-        
+        // todo
     } else if (address >= 0x6000) {
         uint16_t index = address - 0x6000;
         sram[index] = value;
     } else {
         std::printf("error: cartridge read at address: %04X\n", address);
+    }
+}
+
+uint16_t Cartridge::nameTableAddress(uint16_t address) {
+    if(address < 0x2000) {
+        int index = chrBank * 0x2000 + address;
+        return chr[index];
+    } else if (address >= 0xC000) {
+        int index = prgBank2 * 0x4000 + (address - 0xC000);
+        return prg[index];
+    } else if (address >= 0x8000) {
+        int index = prgBank1 * 0x4000 + (address - 0x8000);
+        return prg[index];
+    } else if (address >= 0x6000) {
+        int index = address - 0x6000;
+        return sram[index];
+    } else {
+        std::printf("error: cartridge read at address: %04X\n", address);
+        return 0;
     }
 }

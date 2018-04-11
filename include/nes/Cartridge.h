@@ -35,8 +35,15 @@ public:
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
+    uint16_t nameTableAddress(uint16_t address);
+
 private:
     INesHeader header;
+    int prgBanks;
+    int chrBanks;
+    int prgBank1;
+    int prgBank2;
+    int chrBank;
 };
 
 #endif // CARTRIDGE_H

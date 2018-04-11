@@ -13,10 +13,40 @@ CPU::~CPU() {}
 uint8_t CPU::read(uint16_t address) {
     if (address < 0x2000) {
         return console->ram[address % 0x0800];
+    } else if (address < 0x4000) {
+        return console->ppu->readRegister(0x2000 + address % 8);
+    } else if (address == 0x4014) {
+        return console->ppu->readRegister(address);
+    } else if (address == 0x4016) {
+        // TODO control1
+    } else if (address == 0x4017) {
+        // TODO control2
     } else if (address >= 0x6000) {
         return console->cartridge->read(address);
+    } else {
+        std::printf("error: cpu read at address: %04X\n", address);
+        return 0;
     }
-    return 0;
+}
+
+void CPU::write(uint16_t address, uint8_t value) {
+    if (address < 0x2000) {
+        console->ram[address % 0x0800] = value;
+    } else if (address < 0x4000) {
+        console->ppu->writeRegister(0x2000 + address % 8, value);
+    } else if (address == 0x4014) {
+        console->ppu->writeRegister(address, value);
+    } else if (address == 0x4016) {
+        // TODO control1
+    } else if (address == 0x4017) {
+        // TODO control2
+    } else if (address < 0x4020) {
+        // TODO: I/O register
+    } else if (address >= 0x6000) {
+        console->cartridge->write(address, value);
+    } else {
+        std::printf("error: cpu write at address: %04X\n", address);
+    }
 }
 
 uint16_t CPU::read16(uint16_t address) {
@@ -31,14 +61,6 @@ uint16_t CPU::read16bug(uint16_t address) {
     uint16_t lo = uint16_t(read(a));
     uint16_t hi = uint16_t(read(b));
     return (hi << 8) | lo;
-}
-
-void CPU::write(uint16_t address, uint8_t value) {
-    if (address < 0x2000) {
-        console->ram[address % 0x0800] = value;
-    } else if (address >= 0x6000) {
-        console->cartridge->write(address, value);
-    }
 }
 
 void CPU::reset() {
@@ -119,7 +141,7 @@ uint32_t CPU::step() {
     case AddressMode::Implied:
         address = 0;
         break;
-    case AddressMode::IndexedIndirect: 
+    case AddressMode::IndexedIndirect:
         address = read16bug(uint16_t((read(PC + 1) + X) & 0xFF));
         break;
     case AddressMode::Indirect:

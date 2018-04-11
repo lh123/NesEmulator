@@ -149,11 +149,13 @@ public:
     friend void tas(CPU *cpu, CPU::StepInfo *info);
     friend void xaa(CPU *cpu, CPU::StepInfo *info);
     
+public:
+    uint8_t stall;           // number of cycles to stall
+    uint64_t cycles; // number of cycles
+    
 private:
     Console *console;
-
-    uint64_t cycles; // number of cycles
-
+    
     uint16_t PC; // program counter
     uint8_t SP;  // stack pointer
 
@@ -171,7 +173,6 @@ private:
     uint8_t N; // negative flag
 
     InterruptType interrupt; // interrupt type to perform
-    uint8_t stall;           // number of cycles to stall
 };
 
 
