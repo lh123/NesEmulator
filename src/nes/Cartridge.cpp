@@ -1,11 +1,12 @@
 #include "nes/Cartridge.h"
 
 #include <cstdio>
-#include <cstring>
 
 const uint32_t NesMagic = 0x1a53454e;
 
-Cartridge::Cartridge() : sram{0} {}
+Cartridge::Cartridge()
+    : prg(nullptr), chr(nullptr), mPRGLength(0), mCHRLength(0), sram{0},
+      mapper(0), mirror(0), battery(0), trainer(false) {}
 
 Cartridge::~Cartridge() {
     delete[] chr;
@@ -54,22 +55,17 @@ bool Cartridge::loadNesFile(const char *path) {
         return false;
     }
 
-    prgBanks = header.numPRG;
-    prgBank1 = 0;
-    prgBank2 = prgBanks - 1;
+    mPRGLength = header.numPRG * 0x4000;
+    prg = new uint8_t[mPRGLength];
+    std::fread(prg, mPRGLength, 1, file);
 
-    prg = new uint8_t[header.numPRG * 16384];
-    std::fread(prg, header.numPRG * 16384, 1, file);
-
-    chrBanks = header.numCHR;
-    chrBank = 0;
-    // provide chr if not in file
     if (header.numCHR != 0) {
-        chr = new uint8_t[header.numCHR * 8192];
-        std::fread(chr, header.numCHR * 8192, 1, file);
+        mCHRLength = header.numCHR * 0x2000;
+        chr = new uint8_t[mCHRLength];
+        std::fread(chr, mCHRLength, 1, file);
     } else {
-        chr = new uint8_t[8192];
-        std::memset(chr, 0, 8192);
+        mCHRLength = 0x2000;
+        chr = new uint8_t[mCHRLength]{0};
     }
 
     std::fclose(file);
@@ -104,9 +100,13 @@ void Cartridge::write(uint16_t address, uint8_t value) {
     }
 }
 
-uint16_t Cartridge::nameTableAddress(uint16_t address) {
-    address = (address - 0x2000) % 0x1000;
-    uint16_t table = address / 0x0400;
-    uint16_t offset = address % 0x0400;
-    return 0x2000 + MirrorLookUp[mirror][table] * 0x0400 + offset;
-}
+uint8_t Cartridge::prgLength() const { return mPRGLength; }
+
+uint8_t Cartridge::chrLength() const { return mCHRLength; }
+
+// uint16_t Cartridge::nameTableAddress(uint16_t address) {
+//     address = (address - 0x2000) % 0x1000;
+//     uint16_t table = address / 0x0400;
+//     uint16_t offset = address % 0x0400;
+//     return 0x2000 + MirrorLookUp[mirror][table] * 0x0400 + offset;
+// }

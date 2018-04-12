@@ -4,7 +4,7 @@
 #include <cstdio>
 
 PPU::PPU(Console *console)
-    : cycle(0), scanLine(0), frame(0),
+    : PPUMemory(console), cycle(0), scanLine(0), frame(0),
       verticalBlank(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0),
       t(0), x(0), w(0), f(0), nameTableByte(0), attributeTableByte(0),
       lowTileByte(0), highTileByte(0), tileData(0), flagNameTable(0),
@@ -13,7 +13,6 @@ PPU::PPU(Console *console)
       flagGrayScale(0), flagShowLeftBackground(0), flagShowLeftSprites(0),
       flagShowBackground(0), flagShowSprites(0), flagRedHit(0), flagGreenHit(0),
       flagBlueHit(0), oamAddress(0), scroll(0), bufferedData(0) {
-    this->console = console;
     buffer = new Image{256, 240};
     reset();
 }
@@ -30,39 +29,10 @@ void PPU::reset() {
     writeOAMAddress(0);
 }
 
-uint8_t PPU::read(uint16_t address) {
-    address = address % 0x4000;
-    if (address < 0x2000) {
-        return console->cartridge->read(address);
-    } else if (address < 0x3F00) {
-        address = console->cartridge->nameTableAddress(address);
-        return nameTableData[address % NAME_TABLE_DATA_SIZE];
-    } else if (address < 0x4000) {
-        return paletteData[address % PALETTE_DATA_SIZE];
-    } else {
-        std::printf("error: ppu read at address: %04X\n", address);
-    }
-    return 0;
-}
-
 uint16_t PPU::read16(uint16_t address) {
     uint16_t lo = read(address);
     uint16_t hi = read(address + 1);
     return (hi << 8) | lo;
-}
-
-void PPU::write(uint16_t address, uint8_t value) {
-    address = address % 0x4000;
-    if (address < 0x2000) {
-        console->cartridge->write(address, value);
-    } else if (address < 0x3F00) {
-        address = console->cartridge->nameTableAddress(address);
-        nameTableData[address % NAME_TABLE_DATA_SIZE] = value;
-    } else if (address < 0x4000) {
-        paletteData[address % PALETTE_DATA_SIZE] = value;
-    } else {
-        std::printf("error: ppu write at address: %04X\n", address);
-    }
 }
 
 uint8_t PPU::readPalette(uint16_t address) {

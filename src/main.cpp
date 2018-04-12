@@ -3,9 +3,7 @@
 #include <cstdio>
 
 int main() {
-    Cartridge ca;
-    ca.loadNesFile("E:\\VSCode\\NesEmulator\\rom\\official_instructions.nes");
-    Console col{&ca};
+    Console col{"E:\\VSCode\\NesEmulator\\rom\\official_instructions.nes"};
     col.cpu->write(0x6000, 0x80);
     for (;;) {
         col.cpu->step();

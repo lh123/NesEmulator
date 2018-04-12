@@ -1,11 +1,12 @@
 #ifndef CPU_H
 #define CPU_H
 
+#include "nes/Memory.h"
 #include <cstdint>
 
 class Console;
 
-class CPU {
+class CPU : public CPUMemory {
 
 public:
     static constexpr uint16_t NMI_ADDRESS = 0xFFFA;
@@ -39,11 +40,11 @@ public:
     CPU(Console *console);
     ~CPU();
 
-    uint8_t read(uint16_t address);
+    // uint8_t read(uint16_t address);
     uint16_t read16(uint16_t address);
     uint16_t read16bug(uint16_t address);
 
-    void write(uint16_t address, uint8_t value);
+    // void write(uint16_t address, uint8_t value);
 
     bool pageDiffer(uint16_t a, uint16_t b);
     void addBranchCycles(StepInfo *info);
@@ -67,7 +68,7 @@ public:
     void setZN(uint8_t value);
 
     void triggerNMI();
-    //void triggerIRQ();
+    // void triggerIRQ();
 
     void nmi();
     void irq();
@@ -148,14 +149,14 @@ public:
     friend void sre(CPU *cpu, CPU::StepInfo *info);
     friend void tas(CPU *cpu, CPU::StepInfo *info);
     friend void xaa(CPU *cpu, CPU::StepInfo *info);
-    
+
 public:
-    uint8_t stall;           // number of cycles to stall
+    uint8_t stall;   // number of cycles to stall
     uint64_t cycles; // number of cycles
-    
+
 private:
-    Console *console;
-    
+    // Console *console;
+
     uint16_t PC; // program counter
     uint8_t SP;  // stack pointer
 
@@ -174,7 +175,6 @@ private:
 
     InterruptType interrupt; // interrupt type to perform
 };
-
 
 #include "nes/Instruction.h"
 

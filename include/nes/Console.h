@@ -12,7 +12,7 @@
 class Console {
 public:
     static constexpr uint32_t RAM_SIZE = 2048;
-    Console(Cartridge *cartridge);
+    Console(const char *path);
     ~Console();
 
     void reset();
@@ -30,5 +30,7 @@ public:
     Controller *controller2;
     
     uint8_t ram[RAM_SIZE];
+private:
+    bool isSuccess;
 };
 #endif

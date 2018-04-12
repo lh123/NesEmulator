@@ -3,15 +3,6 @@
 
 #include <cstdint>
 
-enum class Mirror { Horizontal = 0, Vertical, Quad };
-
-constexpr const int MirrorLookUp[4][4] = {
-    {0, 0, 1, 1}, //
-    {0, 1, 0, 1}, //
-    {0, 0, 0, 0}, //
-    {0, 1, 2, 3}  //
-};
-
 struct INesHeader {
 
     uint32_t magic;
@@ -29,6 +20,8 @@ public:
 
     uint8_t *prg;
     uint8_t *chr;
+    int mPRGLength;
+    int mCHRLength;
     uint8_t sram[SRAM_SIZE];
 
     uint8_t mapper;
@@ -43,16 +36,11 @@ public:
     bool loadNesFile(const char *path);
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
-
-    uint16_t nameTableAddress(uint16_t address);
+    uint8_t prgLength() const;
+    uint8_t chrLength() const;
 
 private:
     INesHeader header;
-    int prgBanks;
-    int chrBanks;
-    int prgBank1;
-    int prgBank2;
-    int chrBank;
 };
 
 #endif // CARTRIDGE_H

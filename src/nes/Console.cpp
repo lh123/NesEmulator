@@ -1,21 +1,28 @@
 #include "nes/Console.h"
 #include <cstdio>
 
-Console::Console(Cartridge *cartridge) : cartridge(cartridge), ram{0} {
-    cpu = new CPU(this);
-    cpu->reset();
-    ppu = new PPU(this);
-    ppu->reset();
-
-    controller1 = new Controller();
-    controller2 = new Controller();
+Console::Console(const char *path) : ram{0} {
+    cartridge = new Cartridge();
+    isSuccess = cartridge->loadNesFile(path);
+    if (isSuccess) {
+        mapper = Mapper::create(this);        
+        cpu = new CPU(this);
+        cpu->reset();
+        ppu = new PPU(this);
+        ppu->reset();
+        controller1 = new Controller();
+        controller2 = new Controller();
+    }
 }
 
 Console::~Console() {
-    delete cpu;
-    delete ppu;
-    delete controller1;
-    delete controller2;
+    if (isSuccess) {
+        delete cpu;
+        delete ppu;
+        delete controller1;
+        delete controller2;
+        Mapper::free(mapper);
+    }
 }
 
 uint32_t Console::step() {
@@ -34,7 +41,7 @@ uint32_t Console::stepFrame() {
 }
 
 void Console::setPressed(int controller, Button button, bool pressed) {
-    if(controller == 1) {
+    if (controller == 1) {
         controller1->setPressed(button, pressed);
     } else if (controller == 2) {
         controller2->setPressed(button, pressed);
@@ -43,6 +50,4 @@ void Console::setPressed(int controller, Button button, bool pressed) {
     }
 }
 
-Image* Console::buffer() {
-    return ppu->buffer;
-}
+Image *Console::buffer() { return ppu->buffer; }

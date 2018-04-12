@@ -1,12 +1,12 @@
 #ifndef PPU_H
 #define PPU_H
-
-#include <cstdint>
 #include "nes/Image.h"
+#include "nes/Memory.h"
+#include <cstdint>
 
 class Console;
 
-class PPU {
+class PPU : public PPUMemory {
 public:
     static constexpr uint32_t OAM_DATA_SIZE = 256;
     static constexpr uint32_t PALETTE_DATA_SIZE = 32;
@@ -18,15 +18,15 @@ public:
     void reset();
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
-    uint8_t read(uint16_t address);
+    // uint8_t read(uint16_t address);
     uint16_t read16(uint16_t address);
-    void write(uint16_t address, uint8_t value);
+    // void write(uint16_t address, uint8_t value);
+
     void step();
 
 private:
     uint8_t readPalette(uint16_t address);
     void writePalette(uint16_t address, uint8_t value);
-
 
     void writeControl(uint8_t value);
     void writeMask(uint8_t value);
@@ -74,16 +74,17 @@ private:
 public:
     uint64_t frame; // frame counter
     Image *buffer;
-    
+    uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
+    uint8_t paletteData[PALETTE_DATA_SIZE];
+
 private:
-    Console *console;
+    // Console *console;
     uint32_t cycle; // 0-340
-    uint32_t scanLine; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
+    uint32_t
+        scanLine; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
 
     uint8_t verticalBlank; // vertical blank flag
 
-    uint8_t paletteData[PALETTE_DATA_SIZE];
-    uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
 
     uint16_t v;
@@ -134,11 +135,10 @@ private:
     uint16_t scroll;
 
     // $2006 PPUADDR
-    //uint16_t address; // address used by $2007 PPUDATA
+    // uint16_t address; // address used by $2007 PPUDATA
 
     // $2007 PPUDATA
     uint8_t bufferedData;
-
 };
 
 #endif
