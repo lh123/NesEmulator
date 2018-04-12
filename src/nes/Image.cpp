@@ -1,7 +1,7 @@
 #include "nes/Image.h"
 
 Image::Image(int width, int height) : width(width), height(height) {
-    data = new RGBA[width * height]{0};
+    data = new RGBA[width * height]{{0}};
 }
 
 Image::~Image() { delete[] data; }

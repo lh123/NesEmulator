@@ -18,9 +18,9 @@ uint8_t CPU::read(uint16_t address) {
     } else if (address == 0x4014) {
         return console->ppu->readRegister(address);
     } else if (address == 0x4016) {
-        // TODO control1
+        return console->controller1->read();
     } else if (address == 0x4017) {
-        // TODO control2
+        return console->controller2->read();
     } else if (address >= 0x6000) {
         return console->cartridge->read(address);
     } else {
@@ -37,9 +37,9 @@ void CPU::write(uint16_t address, uint8_t value) {
     } else if (address == 0x4014) {
         console->ppu->writeRegister(address, value);
     } else if (address == 0x4016) {
-        // TODO control1
+        console->controller1->write(value);
     } else if (address == 0x4017) {
-        // TODO control2
+        console->controller2->write(value);
     } else if (address < 0x4020) {
         // TODO: I/O register
     } else if (address >= 0x6000) {
@@ -103,13 +103,10 @@ uint32_t CPU::step() {
     //     return 1;
     // }
     // printInstruction();
-    uint64_t preCycles = cycles;
+    //uint64_t preCycles = cycles;
     switch (interrupt) {
     case CPU::InterruptType::NMI:
         nmi();
-        break;
-    case CPU::InterruptType::IRQ:
-        irq();
         break;
     }
     interrupt = InterruptType::None;
@@ -170,6 +167,8 @@ uint32_t CPU::step() {
         address = uint16_t(read(PC + 1) + Y) & 0xFF;
         break;
     }
+
+    uint64_t preCycles = cycles;
 
     PC += uint16_t(instructionSize[opcode]);
     cycles += uint64_t(instructionCycle[opcode]);
@@ -274,18 +273,18 @@ void CPU::setZN(uint8_t value) {
 
 void CPU::triggerNMI() { interrupt = InterruptType::NMI; }
 
-void CPU::triggerIRQ() {
-    if (I == 0) {
-        interrupt = InterruptType::IRQ;
-    }
-}
+// void CPU::triggerIRQ() {
+//     if (I == 0) {
+//         interrupt = InterruptType::IRQ;
+//     }
+// }
 
 void CPU::nmi() {
     push16(PC);
     php(this, nullptr);
     PC = read16(NMI_ADDRESS);
-    I = 1;
-    cycles += 7;
+    // I = 1;
+    // cycles += 7;
 }
 
 void CPU::irq() {

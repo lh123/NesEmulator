@@ -67,7 +67,7 @@ public:
     void setZN(uint8_t value);
 
     void triggerNMI();
-    void triggerIRQ();
+    //void triggerIRQ();
 
     void nmi();
     void irq();

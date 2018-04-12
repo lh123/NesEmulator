@@ -73,7 +73,8 @@ private:
 
 public:
     uint64_t frame; // frame counter
-
+    Image *buffer;
+    
 private:
     Console *console;
     uint32_t cycle; // 0-340
@@ -84,7 +85,6 @@ private:
     uint8_t paletteData[PALETTE_DATA_SIZE];
     uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
-    Image *buffer;
 
     uint16_t v;
     uint16_t t;

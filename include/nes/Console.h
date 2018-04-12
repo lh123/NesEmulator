@@ -7,6 +7,7 @@
 #include "nes/PPU.h"
 #include "nes/Cartridge.h"
 #include "nes/Mapper.h"
+#include "nes/Controller.h"
 
 class Console {
 public:
@@ -17,12 +18,16 @@ public:
     void reset();
     uint32_t step();
     uint32_t stepFrame();
+    void setPressed(int controller, Button button, bool pressed);
+    Image* buffer();
 
 public:
     CPU *cpu;
     PPU *ppu;
     Cartridge *cartridge;
     Mapper *mapper;
+    Controller *controller1;
+    Controller *controller2;
     
     uint8_t ram[RAM_SIZE];
 };
