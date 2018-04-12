@@ -105,20 +105,8 @@ void Cartridge::write(uint16_t address, uint8_t value) {
 }
 
 uint16_t Cartridge::nameTableAddress(uint16_t address) {
-    if(address < 0x2000) {
-        int index = chrBank * 0x2000 + address;
-        return chr[index];
-    } else if (address >= 0xC000) {
-        int index = prgBank2 * 0x4000 + (address - 0xC000);
-        return prg[index];
-    } else if (address >= 0x8000) {
-        int index = prgBank1 * 0x4000 + (address - 0x8000);
-        return prg[index];
-    } else if (address >= 0x6000) {
-        int index = address - 0x6000;
-        return sram[index];
-    } else {
-        std::printf("error: cartridge read at address: %04X\n", address);
-        return 0;
-    }
+    address = (address - 0x2000) % 0x1000;
+    uint16_t table = address / 0x0400;
+    uint16_t offset = address % 0x0400;
+    return 0x2000 + MirrorLookUp[mirror][table] * 0x0400 + offset;
 }

@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-enum class Button { A, B, Select, Start, Up, Down, Left, Right };
+enum class Button { A = 0, B, Select, Start, Up, Down, Left, Right };
 
 class Controller {
 public:

@@ -3,6 +3,15 @@
 
 #include <cstdint>
 
+enum class Mirror { Horizontal = 0, Vertical, Quad };
+
+constexpr const int MirrorLookUp[4][4] = {
+    {0, 0, 1, 1}, //
+    {0, 1, 0, 1}, //
+    {0, 0, 0, 0}, //
+    {0, 1, 2, 3}  //
+};
+
 struct INesHeader {
 
     uint32_t magic;
@@ -18,8 +27,8 @@ class Cartridge {
 public:
     static constexpr uint16_t SRAM_SIZE = 0x2000;
 
-    uint8_t* prg;
-    uint8_t* chr;
+    uint8_t *prg;
+    uint8_t *chr;
     uint8_t sram[SRAM_SIZE];
 
     uint8_t mapper;
@@ -31,7 +40,7 @@ public:
 public:
     Cartridge();
     ~Cartridge();
-    bool loadNesFile(const char * path);
+    bool loadNesFile(const char *path);
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
