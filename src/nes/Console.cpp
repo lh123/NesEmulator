@@ -15,11 +15,11 @@ Console::Console(const char *path) : ram{0} {
 
 Console::~Console() {
     if (isSuccess) {
-        delete cpu;
-        delete ppu;
-        delete controller1;
+        Mapper::free(mapper);        
         delete controller2;
-        Mapper::free(mapper);
+        delete controller1;
+        delete ppu;           
+        delete cpu;
     }
 }
 

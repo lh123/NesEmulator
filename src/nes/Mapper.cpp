@@ -5,6 +5,8 @@
 #include "nes/Mapper4.h"
 #include <cstdio>
 
+Mapper::Mapper() {}
+
 Mapper::~Mapper() {}
 
 Mapper *Mapper::create(Console *console) {
