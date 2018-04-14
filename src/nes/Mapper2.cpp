@@ -8,6 +8,8 @@ Mapper2::Mapper2(Cartridge *cartridge)
     prgBank2 = prgBanks - 1;
 }
 
+Mapper2::~Mapper2() {}
+
 uint8_t Mapper2::read(uint16_t address) {
     if (address < 0x2000) {
         return cartridge->chr[address];

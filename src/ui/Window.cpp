@@ -13,7 +13,7 @@ bool Window::init(const char *title) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, title, nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH * SCALE, HEIGHT * SCALE, title, nullptr, nullptr);
     if (window == nullptr) {
         glfwTerminate();
         return false;
@@ -73,13 +73,14 @@ void Window::run() {
     glEnable(GL_TEXTURE_2D);
     GLuint texture = createTexture();
 
-    // double timestamp = glfwGetTime();
+    double timestamp = glfwGetTime();
 
     while (!glfwWindowShouldClose(window)) {
-        // double now = glfwGetTime();
-        // double elapsed = now - timestamp;
+        double now = glfwGetTime();
+        double elapsed = now - timestamp;
+        timestamp = now;
         readKeys();
-        console->stepFrame();
+        console->stepSeconds(elapsed);
         setTexture(texture, console->buffer());
         glClear(GL_COLOR_BUFFER_BIT);
         drawQuad();

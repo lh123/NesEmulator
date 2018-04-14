@@ -3,7 +3,7 @@
 #include <cstdio>
 
 int main() {
-    Console col{"E:\\VSCode\\NesEmulator\\rom\\hdl.nes"};
+    Console col{"E:\\VSCode\\NesEmulator\\rom\\ppu\\vbl_clear_time.nes"};
     Window window{&col};
     if (!window.init("NES")) {
         std::printf("window init error\n");

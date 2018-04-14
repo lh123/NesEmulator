@@ -8,6 +8,8 @@ Mapper1::Mapper1(Cartridge *cartridge)
     prgOffsets[1] = prgBankOffset(-1);
 }
 
+Mapper1::~Mapper1() {}
+
 uint8_t Mapper1::read(uint16_t address) {
     if (address < 0x2000) {
         uint16_t bank = address / 0x1000;
@@ -64,10 +66,8 @@ void Mapper1::writeRegister(uint16_t address, uint8_t value) {
         writeCHRBank0(value);
     } else if (address <= 0xDFFF) {
         writeCHRBank1(value);
-    } else if (address <= 0xFFFF) {
-        writePRGBank(value);
     } else {
-        std::printf("error: mapper write register at address:0x%04X\n", address);
+        writePRGBank(value);
     }
 }
 
@@ -109,24 +109,24 @@ void Mapper1::writePRGBank(uint8_t value) {
 }
 
 int Mapper1::prgBankOffset(int index) {
-    if(index >= 0x80) {
+    if (index >= 0x80) {
         index -= 0x100;
     }
     index %= cartridge->prgLength() / 0x4000;
     int offset = index * 0x4000;
-    if(offset < 0) {
+    if (offset < 0) {
         offset += cartridge->prgLength();
     }
     return offset;
 }
 
 int Mapper1::chrBankOffset(int index) {
-    if(index >= 0x80) {
+    if (index >= 0x80) {
         index -= 0x100;
     }
     index %= cartridge->chrLength() / 0x1000;
     int offset = index * 0x1000;
-    if(offset < 0) {
+    if (offset < 0) {
         offset += cartridge->chrLength();
     }
     return offset;

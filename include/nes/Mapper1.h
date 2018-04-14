@@ -7,7 +7,7 @@
 class Mapper1 : public Mapper {
 public:
     Mapper1(Cartridge *cartridge);
-
+    ~Mapper1();
     virtual uint8_t read(uint16_t address) override;
     virtual void write(uint16_t address, uint8_t value) override;
     virtual void step() override;

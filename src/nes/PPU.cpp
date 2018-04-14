@@ -4,13 +4,15 @@
 
 PPU::PPU(Console *console)
     : PPUMemory(console), cycle(0), scanLine(0),
-      frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0), x(0), w(0), f(0),
-      reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(0), nameTableByte(0),
-      attributeTableByte(0), lowTileByte(0), highTileByte(0), tileData(0), flagNameTable(0),
-      flagIncrement(0), flagSpriteTable(0), flagBackgroundTable(0), flagSpriteSize(0),
-      flagMasterSlave(0), flagGrayScale(0), flagShowLeftBackground(0), flagShowLeftSprites(0),
-      flagShowBackground(0), flagShowSprites(0), flagRedHit(0), flagGreenHit(0), flagBlueHit(0),
-      oamAddress(0), bufferedData(0) {
+      frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0), x(0), w(0), f(0), reg(0),
+      nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),
+      attributeTableByte(0), lowTileByte(0), highTileByte(0), tileData(0),
+      spriteCount(0), spritePatterns{0}, spritePositions{0}, spritePriorities{0}, spriteIndexes{0},
+      flagNameTable(0), flagIncrement(0), flagSpriteTable(0), flagBackgroundTable(0),
+      flagSpriteSize(0), flagMasterSlave(0), flagGrayScale(0), flagShowLeftBackground(0),
+      flagShowLeftSprites(0), flagShowBackground(0), flagShowSprites(0), flagRedTint(0),
+      flagGreenTint(0), flagBlueTint(0), flagSpriteZeroHit(0), flagSpriteOverflow(0), oamAddress(0),
+      bufferedData(0) {
     front = new Image{256, 240};
     back = new Image{256, 240};
     reset();
@@ -109,9 +111,9 @@ void PPU::writeMask(uint8_t value) {
     flagShowLeftSprites = (value >> 2) & 0x1;
     flagShowBackground = (value >> 3) & 0x1;
     flagShowSprites = (value >> 4) & 0x1;
-    flagRedHit = (value >> 5) & 0x1;
-    flagGreenHit = (value >> 6) & 0x1;
-    flagBlueHit = (value >> 7) & 0x1;
+    flagRedTint = (value >> 5) & 0x1;
+    flagGreenTint = (value >> 6) & 0x1;
+    flagBlueTint = (value >> 7) & 0x1;
 }
 
 uint8_t PPU::readStatus() {
@@ -164,7 +166,7 @@ void PPU::writeAddress(uint8_t value) {
         // t: ........ ABCDEFGH = value: ABCDEFGH
         // v:                   = t
         // w:                   = 0
-        t = (t & 0xFF00) | value;
+        t = (t & 0xFF00) | uint16_t(value);
         v = t;
         w = 0;
     }
@@ -172,6 +174,7 @@ void PPU::writeAddress(uint8_t value) {
 
 uint8_t PPU::readData() {
     uint8_t value = read(v);
+    // emulate buffered reads
     if (v % 0x4000 < 0x3F00) {
         uint8_t buffered = bufferedData;
         bufferedData = value;
@@ -275,7 +278,7 @@ void PPU::fetchNameTableByte() {
 
 void PPU::fetchAttributeTableByte() {
     uint16_t address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
-    uint16_t shift = ((v >> 4) & 4) | (v & 2);
+    uint16_t shift = ((v >> 4) & 0x4) | (v & 0x2);
     attributeTableByte = ((read(address) >> shift) & 0x3) << 2;
 }
 
@@ -340,6 +343,8 @@ void PPU::spritePixel(uint8_t *index, uint8_t *sprite) {
         *sprite = color;
         return;
     }
+    *index = 0;
+    *sprite = 0;
     return;
 }
 
@@ -380,16 +385,16 @@ void PPU::renderPixel() {
 
 uint32_t PPU::fetchSpritePattern(int i, int row) {
     uint8_t tile = oamData[i * 4 + 1];
-    uint8_t attribute = oamData[i * 4 + 2];
+    uint8_t attributes = oamData[i * 4 + 2];
     uint16_t address = 0;
     if (flagSpriteSize == 0) {
-        if ((attribute & 0x80) == 0x80) {
+        if ((attributes & 0x80) == 0x80) {
             row = 7 - row;
         }
         uint8_t table = flagSpriteTable;
         address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + uint16_t(row);
     } else {
-        if ((attribute & 0x80) == 0x80) {
+        if ((attributes & 0x80) == 0x80) {
             row = 15 - row;
         }
         uint8_t table = tile & 0x1;
@@ -400,13 +405,13 @@ uint32_t PPU::fetchSpritePattern(int i, int row) {
         }
         address = 0x1000 * uint16_t(table) + uint16_t(tile) * 16 + uint16_t(row);
     }
-    uint8_t a = (attribute & 0x3) << 2;
+    uint8_t a = (attributes & 0x3) << 2;
     uint8_t lowTileByte = read(address);
     uint8_t highTileByte = read(address + 8);
     uint32_t data = 0;
     for (int i = 0; i < 8; i++) {
         uint8_t p1 = 0, p2 = 0;
-        if ((attribute & 0x40) == 0x40) {
+        if ((attributes & 0x40) == 0x40) {
             p1 = (lowTileByte & 0x1) << 0;
             p2 = (highTileByte & 0x1) << 1;
             lowTileByte >>= 1;
@@ -423,8 +428,8 @@ uint32_t PPU::fetchSpritePattern(int i, int row) {
     return data;
 }
 
-void PPU::evaluteSprites() {
-    unsigned int h = 0;
+void PPU::evaluateSprites() {
+    int h = 0;
     if (flagSpriteSize == 0) {
         h = 8;
     } else {
@@ -435,7 +440,7 @@ void PPU::evaluteSprites() {
         uint8_t y = oamData[i * 4 + 0];
         uint8_t a = oamData[i * 4 + 2];
         uint8_t x = oamData[i * 4 + 3];
-        uint32_t row = scanLine - y;
+        int row = scanLine - int(y);
         if (row < 0 || row >= h) {
             continue;
         }
@@ -443,7 +448,7 @@ void PPU::evaluteSprites() {
             spritePatterns[count] = fetchSpritePattern(i, row);
             spritePositions[count] = x;
             spritePriorities[count] = (a >> 5) & 0x1;
-            spriteIndexes[count] = i;
+            spriteIndexes[count] = uint8_t(i);
         }
         count++;
     }
@@ -536,7 +541,7 @@ void PPU::step() {
     if (renderingEnabled) {
         if (cycle == 257) {
             if (visibleLine) {
-                evaluteSprites();
+                evaluateSprites();
             } else {
                 spriteCount = 0;
             }
@@ -545,7 +550,7 @@ void PPU::step() {
     if (scanLine == 241 && cycle == 1) {
         setVerticalBlank();
     }
-    if (scanLine == 261 && cycle == 1) {
+    if (preLine && cycle == 1) {
         clearVerticalBlank();
         flagSpriteZeroHit = 0;
         flagSpriteOverflow = 0;

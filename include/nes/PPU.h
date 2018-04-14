@@ -22,9 +22,6 @@ public:
     void reset();
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
-    // uint8_t read(uint16_t address);
-    // uint16_t read16(uint16_t address);
-    // void write(uint16_t address, uint8_t value);
 
     void step();
 
@@ -73,43 +70,46 @@ private:
     void renderPixel();
 
     uint32_t fetchSpritePattern(int i, int row);
-    void evaluteSprites();
+    void evaluateSprites();
 
     void tick();
 
 public:
-    uint32_t cycle;    // 0-340
-    uint32_t scanLine; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre    
+    int cycle;      // 0-340
+    int scanLine;   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
     uint64_t frame; // frame counter
-    
-private:
 
-    // Console *console;
+private:
+    // storage variables
     uint8_t paletteData[PALETTE_DATA_SIZE];
     uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
     Image *front;
     Image *back;
 
-    uint16_t v;
-    uint16_t t;
-    uint8_t x;
-    uint8_t w;
-    uint8_t f;
+    // PPU registers
+    uint16_t v; // current vram address
+    uint16_t t; // temporary vram address
+    uint8_t x;  // fine x scroll (3 bit)
+    uint8_t w;  // write toggle (1 bit)
+    uint8_t f;  // even/odd fram flag (1 bit)
 
     uint8_t reg;
 
+    // nmi flags
     bool nmiOccurred;
     bool nmiOutput;
     bool nmiPrevious;
     uint8_t nmiDelay;
 
+    // background temporary variables
     uint8_t nameTableByte;
     uint8_t attributeTableByte;
     uint8_t lowTileByte;
     uint8_t highTileByte;
     uint64_t tileData;
 
+    // sprite temporary variables
     int spriteCount;
     uint32_t spritePatterns[8];
     uint8_t spritePositions[8];
@@ -123,7 +123,6 @@ private:
     uint8_t flagBackgroundTable; // 0: $0000; 1: $1000
     uint8_t flagSpriteSize;      // 0: 8*8; 1: 8*16
     uint8_t flagMasterSlave;     // 0: read EXT; 1: write EXT
-    // uint8_t flagGenerateNMI;     // 0: off; 1: on
 
     // $2001 PPUMASK
     uint8_t flagGrayScale;          // 0: color; 1: gray scale
@@ -131,9 +130,9 @@ private:
     uint8_t flagShowLeftSprites;    // 0: hide; 1: show
     uint8_t flagShowBackground;     // 0: hide; 1: show
     uint8_t flagShowSprites;        // 0: hide; 1: show
-    uint8_t flagRedHit;             // 0: normal; 1: emphasized
-    uint8_t flagGreenHit;           // 0: normal; 1: emphasized
-    uint8_t flagBlueHit;            // 0: normal; 1: emphasized
+    uint8_t flagRedTint;            // 0: normal; 1: emphasized
+    uint8_t flagGreenTint;          // 0: normal; 1: emphasized
+    uint8_t flagBlueTint;           // 0: normal; 1: emphasized
 
     // $2002 PPUSTATUS
     uint8_t flagSpriteZeroHit;
@@ -141,9 +140,6 @@ private:
 
     // $2003 OAMADDR
     uint8_t oamAddress;
-
-    // // $2005 PPUSCROLL
-    // uint16_t scroll;
 
     // $2007 PPUDATA
     uint8_t bufferedData;

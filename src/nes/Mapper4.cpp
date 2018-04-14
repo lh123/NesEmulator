@@ -3,7 +3,14 @@
 
 Mapper4::Mapper4(Console *console, Cartridge *cartridge)
     : console(console), cartridge(cartridge), _register(0), _registers{0}, prgMode(0),
-      chrMode(0), prgOffsets{0}, chrOffsets{0}, reload(0), counter(0), irqEnable(false) {}
+      chrMode(0), prgOffsets{0}, chrOffsets{0}, reload(0), counter(0), irqEnable(false) {
+    prgOffsets[0] = prgBankOffset(0);
+    prgOffsets[1] = prgBankOffset(1);
+    prgOffsets[2] = prgBankOffset(-2);
+    prgOffsets[3] = prgBankOffset(-1);
+}
+
+Mapper4::~Mapper4(){};
 
 uint8_t Mapper4::read(uint16_t address) {
     if (address < 0x2000) {
@@ -92,10 +99,13 @@ void Mapper4::writeBankData(uint8_t value) {
 }
 
 void Mapper4::writeMirror(uint8_t value) {
-    if ((value & 0x1) == 0) {
+    switch (value & 0x1) {
+    case 0:
         cartridge->mirror = uint8_t(Mirror::Vertical);
-    } else if ((value & 0x1) == 1) {
+        break;
+    case 1:
         cartridge->mirror = uint8_t(Mirror::Horizontal);
+        break;
     }
 }
 
@@ -110,6 +120,10 @@ void Mapper4::writeIRQDisable(uint8_t value) { irqEnable = false; }
 void Mapper4::writeIRQEnable(uint8_t value) { irqEnable = true; }
 
 int Mapper4::prgBankOffset(int index) {
+    if (index >= 0x80) {
+        index -= 0x100;
+    }
+    index %= cartridge->prgLength() / 0x2000;
     int offset = index * 0x2000;
     if (offset < 0) {
         offset += cartridge->prgLength();
@@ -118,6 +132,10 @@ int Mapper4::prgBankOffset(int index) {
 }
 
 int Mapper4::chrBankOffset(int index) {
+    if (index >= 0x80) {
+        index -= 0x100;
+    }
+    index %= cartridge->chrLength() / 0x0400;
     int offset = index * 0x0400;
     if (offset < 0) {
         offset += cartridge->chrLength();

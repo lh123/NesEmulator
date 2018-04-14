@@ -40,8 +40,8 @@ static InstructionFunc InstructionTable[256] = {
 };
 
 CPU::CPU(Console *console)
-    : CPUMemory(console), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0), D(0), B(0),
-      V(0), N(0) {
+    : CPUMemory(console), stall(0), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0),
+      D(0), B(0), U(0), V(0), N(0), interrupt(InterruptType::None) {
     reset();
 }
 
@@ -55,7 +55,7 @@ uint16_t CPU::read16(uint16_t address) {
 
 uint16_t CPU::read16bug(uint16_t address) {
     uint16_t a = address;
-    uint16_t b = (a & 0xFF00) | ((a + 1) & 0xFF);
+    uint16_t b = (a & 0xFF00) | uint16_t(uint8_t(a + 1));
     uint16_t lo = uint16_t(read(a));
     uint16_t hi = uint16_t(read(b));
     return (hi << 8) | lo;
@@ -64,7 +64,6 @@ uint16_t CPU::read16bug(uint16_t address) {
 void CPU::reset() {
     cycles = 0;
     PC = read16(0xFFFC);
-    // PC = 0xC000;
     SP = 0xFD;
     setFlags(0x24);
 }
@@ -140,7 +139,7 @@ uint32_t CPU::step() {
         address = 0;
         break;
     case AddressMode::IndexedIndirect:
-        address = read16bug(uint16_t((read(PC + 1) + X) & 0xFF));
+        address = read16bug(uint16_t((read(PC + 1) + X)) & 0xFF);
         break;
     case AddressMode::Indirect:
         address = read16bug(uint16_t(read16(PC + 1)));

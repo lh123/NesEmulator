@@ -5,8 +5,8 @@
 const uint32_t NesMagic = 0x1a53454e;
 
 Cartridge::Cartridge()
-    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0), trainer(false),
-      mPRGLength(0), mCHRLength(0) {}
+    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0),
+      trainer(false), header{0}, mPRGLength(0), mCHRLength(0) {}
 
 Cartridge::~Cartridge() {
     delete[] chr;

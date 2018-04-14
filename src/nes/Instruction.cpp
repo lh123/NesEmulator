@@ -9,7 +9,7 @@ void adc(CPU *cpu, CPU::StepInfo *info) {
 
     cpu->A = a + b + c;
     cpu->setZN(cpu->A);
-    if (int16_t(a) + int16_t(b) + int16_t(c) > 0xFF) {
+    if (int(a) + int(b) + int(c) > 0xFF) {
         cpu->C = 1;
     } else {
         cpu->C = 0;
@@ -270,7 +270,7 @@ void sbc(CPU *cpu, CPU::StepInfo *info) {
     uint8_t c = cpu->C;
     cpu->A = a - b - (1 - c);
     cpu->setZN(cpu->A);
-    if (int16_t(a) - int16_t(b) - int16_t(1 - c) >= 0) {
+    if (int(a) - int(b) - int(1 - c) >= 0) {
         cpu->C = 1;
     } else {
         cpu->C = 0;

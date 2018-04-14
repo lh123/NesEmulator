@@ -9,7 +9,7 @@ class Console;
 class Mapper4 : public Mapper {
 public:
     Mapper4(Console *console, Cartridge *cartridge);
-
+    ~Mapper4();
     virtual uint8_t read(uint16_t address) override;
     virtual void write(uint16_t address, uint8_t value) override;
     virtual void step() override;

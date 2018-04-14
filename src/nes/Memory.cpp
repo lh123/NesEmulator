@@ -44,7 +44,7 @@ void CPUMemory::write(uint16_t address, uint8_t value) {
         console->ram[address % 0x0800] = value;
     } else if (address < 0x4000) {
         console->ppu->writeRegister(0x2000 + address % 8, value);
-    } else if (address < 0x4015) {
+    } else if (address < 0x4014) {
         // TODO APU
     } else if (address == 0x4014) {
         console->ppu->writeRegister(address, value);
