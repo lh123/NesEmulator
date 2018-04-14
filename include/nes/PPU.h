@@ -12,6 +12,10 @@ public:
     static constexpr uint32_t PALETTE_DATA_SIZE = 32;
     static constexpr uint32_t NAME_TABLE_DATA_SIZE = 2048;
 
+    friend class PPUMemory;
+    friend class Console;
+    friend class Mapper4;
+
 public:
     PPU(Console *console);
     ~PPU();
@@ -19,7 +23,7 @@ public:
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
     // uint8_t read(uint16_t address);
-    uint16_t read16(uint16_t address);
+    // uint16_t read16(uint16_t address);
     // void write(uint16_t address, uint8_t value);
 
     void step();
@@ -50,6 +54,8 @@ private:
     void copyX();
     void copyY();
 
+    void nmiChange();
+
     void setVerticalBlank();
     void clearVerticalBlank();
 
@@ -72,26 +78,31 @@ private:
     void tick();
 
 public:
+    uint32_t cycle;    // 0-340
+    uint32_t scanLine; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre    
     uint64_t frame; // frame counter
-    Image *buffer;
-    uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
-    uint8_t paletteData[PALETTE_DATA_SIZE];
-
+    
 private:
+
     // Console *console;
-    uint32_t cycle; // 0-340
-    uint32_t
-        scanLine; // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
-
-    uint8_t verticalBlank; // vertical blank flag
-
+    uint8_t paletteData[PALETTE_DATA_SIZE];
+    uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
+    Image *front;
+    Image *back;
 
     uint16_t v;
     uint16_t t;
     uint8_t x;
     uint8_t w;
     uint8_t f;
+
+    uint8_t reg;
+
+    bool nmiOccurred;
+    bool nmiOutput;
+    bool nmiPrevious;
+    uint8_t nmiDelay;
 
     uint8_t nameTableByte;
     uint8_t attributeTableByte;
@@ -112,7 +123,7 @@ private:
     uint8_t flagBackgroundTable; // 0: $0000; 1: $1000
     uint8_t flagSpriteSize;      // 0: 8*8; 1: 8*16
     uint8_t flagMasterSlave;     // 0: read EXT; 1: write EXT
-    uint8_t flagGenerateNMI;     // 0: off; 1: on
+    // uint8_t flagGenerateNMI;     // 0: off; 1: on
 
     // $2001 PPUMASK
     uint8_t flagGrayScale;          // 0: color; 1: gray scale
@@ -131,11 +142,8 @@ private:
     // $2003 OAMADDR
     uint8_t oamAddress;
 
-    // $2005 PPUSCROLL
-    uint16_t scroll;
-
-    // $2006 PPUADDR
-    // uint16_t address; // address used by $2007 PPUDATA
+    // // $2005 PPUSCROLL
+    // uint16_t scroll;
 
     // $2007 PPUDATA
     uint8_t bufferedData;

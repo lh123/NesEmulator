@@ -13,16 +13,10 @@ enum class Mirror {
     Four = 4
 };
 
-constexpr const int MirrorLookUp[4][4] = {
-    {0, 0, 1, 1}, //
-    {0, 1, 0, 1}, //
-    {0, 0, 0, 0}, //
-    {0, 1, 2, 3}  //
-};
-
 class Memory {
 public:
     Memory(Console *console);
+    virtual ~Memory();
     virtual uint8_t read(uint16_t address) = 0;
     virtual void write(uint16_t address, uint8_t value) = 0;
 

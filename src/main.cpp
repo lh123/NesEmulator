@@ -1,23 +1,31 @@
-#include "nes/Cartridge.h"
 #include "nes/Console.h"
+#include "ui/Window.h"
 #include <cstdio>
 
 int main() {
-    Console col{"E:\\VSCode\\NesEmulator\\rom\\official_instructions.nes"};
-    col.cpu->write(0x6000, 0x80);
-    for (;;) {
-        col.cpu->step();
-        if(col.cpu->read(0x6000) != 0x80) {
-            std::printf("status:%02X\n", col.cpu->read(0x6000));
-            for(int i = 0;;i++){
-                uint8_t c = col.cpu->read(0x6004 + i);
-                if(c == 0){
-                    break;
-                }
-                std::printf("%c", c);
-            }
-            break;
-        }
+    Console col{"E:\\VSCode\\NesEmulator\\rom\\hdl.nes"};
+    Window window{&col};
+    if (!window.init("NES")) {
+        std::printf("window init error\n");
+        return 0;
     }
+    window.run();
+    window.close();
+    // col.cpu->write(0x6000, 0x80);
+    // while(true) {
+    //     col.cpu->step();
+    //     if(col.cpu->read(0x6000) != 0x80) {
+    //         uint16_t add = 0x6004;
+    //         while(true) {
+    //             char ch = char(col.cpu->read(add));
+    //             std::printf("%c", ch);
+    //             if(ch == '\0'){
+    //                 break;
+    //             }
+    //             add++;
+    //         }
+    //         break;
+    //     }
+    // }
     return 0;
 }

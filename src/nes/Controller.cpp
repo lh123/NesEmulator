@@ -28,7 +28,7 @@ uint8_t Controller::read() {
         value = 0;
     }
     index++;
-    if(strobe & 0x1 == 0x1) {
+    if((strobe & 0x1) == 0x1) {
         index = 0;
     }
     return value;
@@ -36,7 +36,7 @@ uint8_t Controller::read() {
 
 void Controller::write(uint8_t value) {
     strobe = value;
-    if(strobe & 0x1 == 0x1) {
+    if((strobe & 0x1) == 0x1) {
         index = 0;
     }
 }

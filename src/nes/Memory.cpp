@@ -1,8 +1,18 @@
 #include "nes/Memory.h"
-#include <cstdio>
 #include "nes/Console.h"
+#include <cstdio>
+
+static const int MirrorLookUp[5][4] = {
+    {0, 0, 1, 1}, //
+    {0, 1, 0, 1}, //
+    {0, 0, 0, 0}, //
+    {1, 1, 1, 1}, //
+    {0, 1, 2, 3}  //
+};
 
 Memory::Memory(Console *console) : console(console) {}
+
+Memory::~Memory() {}
 
 uint8_t CPUMemory::read(uint16_t address) {
     if (address < 0x2000) {
@@ -11,14 +21,20 @@ uint8_t CPUMemory::read(uint16_t address) {
         return console->ppu->readRegister(0x2000 + address % 8);
     } else if (address == 0x4014) {
         return console->ppu->readRegister(address);
+    } else if (address == 0x4015) {
+        // TODO APU
+        return 0;
     } else if (address == 0x4016) {
         return console->controller1->read();
     } else if (address == 0x4017) {
         return console->controller2->read();
+    } else if (address < 0x6000) {
+        // TODO I/O register
+        return 0;
     } else if (address >= 0x6000) {
         return console->mapper->read(address);
     } else {
-        std::printf("error: cpu read at address: %04X\n", address);
+        std::printf("error: cpu read at address: 0x%04X\n", address);
         return 0;
     }
 }
@@ -28,18 +44,23 @@ void CPUMemory::write(uint16_t address, uint8_t value) {
         console->ram[address % 0x0800] = value;
     } else if (address < 0x4000) {
         console->ppu->writeRegister(0x2000 + address % 8, value);
+    } else if (address < 0x4015) {
+        // TODO APU
     } else if (address == 0x4014) {
         console->ppu->writeRegister(address, value);
+    } else if (address == 0x4015) {
+        // TODO APU
     } else if (address == 0x4016) {
         console->controller1->write(value);
-    } else if (address == 0x4017) {
         console->controller2->write(value);
-    } else if (address < 0x4020) {
+    } else if (address == 0x4017) {
+        // TODO APU
+    } else if (address < 0x6000) {
         // TODO: I/O register
     } else if (address >= 0x6000) {
         console->mapper->write(address, value);
     } else {
-        std::printf("error: cpu write at address: %04X\n", address);
+        std::printf("error: cpu write at address: 0x%04X\n", address);
     }
 }
 
@@ -49,11 +70,12 @@ uint8_t PPUMemory::read(uint16_t address) {
         return console->mapper->read(address);
     } else if (address < 0x3F00) {
         uint8_t mode = console->cartridge->mirror;
-        return console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE];
+        return console->ppu
+            ->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE];
     } else if (address < 0x4000) {
-        return console->ppu->paletteData[address % PPU::PALETTE_DATA_SIZE];
+        return console->ppu->readPalette(address % 32);
     } else {
-        std::printf("error: ppu read at address: %04X\n", address);
+        std::printf("error: ppu read at address: 0x%04X\n", address);
     }
     return 0;
 }
@@ -64,11 +86,12 @@ void PPUMemory::write(uint16_t address, uint8_t value) {
         console->mapper->write(address, value);
     } else if (address < 0x3F00) {
         uint8_t mode = console->cartridge->mirror;
-        console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE] = value;
+        console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE] =
+            value;
     } else if (address < 0x4000) {
-        console->ppu->paletteData[address % PPU::PALETTE_DATA_SIZE] = value;
+        console->ppu->writePalette(address % 32, value);
     } else {
-        std::printf("error: ppu write at address: %04X\n", address);
+        std::printf("error: ppu write at address: 0x%04X\n", address);
     }
 }
 

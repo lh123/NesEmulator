@@ -223,9 +223,7 @@ void pla(CPU *cpu, CPU::StepInfo *info) {
     cpu->setZN(cpu->A);
 }
 
-void plp(CPU *cpu, CPU::StepInfo *info) {
-    cpu->setFlags((cpu->pull() & 0xEF) | 0x20);
-}
+void plp(CPU *cpu, CPU::StepInfo *info) { cpu->setFlags((cpu->pull() & 0xEF) | 0x20); }
 
 void rol(CPU *cpu, CPU::StepInfo *info) {
     if (info->mode == CPU::AddressMode::Accumulator) {

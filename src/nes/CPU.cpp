@@ -4,9 +4,46 @@
 
 #include "nes/Console.h"
 
+static InstructionFunc InstructionTable[256] = {
+    brk, ora,  kil, slo, nop, ora,  asl, slo, //
+    php, ora,  asl, anc, nop, ora,  asl, slo, //
+    bpl, ora,  kil, slo, nop, ora,  asl, slo, //
+    clc, ora,  nop, slo, nop, ora,  asl, slo, //
+    jsr, and_, kil, rla, bit, and_, rol, rla, //
+    plp, and_, rol, anc, bit, and_, rol, rla, //
+    bmi, and_, kil, rla, nop, and_, rol, rla, //
+    sec, and_, nop, rla, nop, and_, rol, rla, //
+    rti, eor,  kil, sre, nop, eor,  lsr, sre, //
+    pha, eor,  lsr, alr, jmp, eor,  lsr, sre, //
+    bvc, eor,  kil, sre, nop, eor,  lsr, sre, //
+    cli, eor,  nop, sre, nop, eor,  lsr, sre, //
+    rts, adc,  kil, rra, nop, adc,  ror, rra, //
+    pla, adc,  ror, arr, jmp, adc,  ror, rra, //
+    bvs, adc,  kil, rra, nop, adc,  ror, rra, //
+    sei, adc,  nop, rra, nop, adc,  ror, rra, //
+    nop, sta,  nop, sax, sty, sta,  stx, sax, //
+    dey, nop,  txa, xaa, sty, sta,  stx, sax, //
+    bcc, sta,  kil, ahx, sty, sta,  stx, sax, //
+    tya, sta,  txs, tas, shy, sta,  shx, ahx, //
+    ldy, lda,  ldx, lax, ldy, lda,  ldx, lax, //
+    tay, lda,  tax, lax, ldy, lda,  ldx, lax, //
+    bcs, lda,  kil, lax, ldy, lda,  ldx, lax, //
+    clv, lda,  tsx, las, ldy, lda,  ldx, lax, //
+    cpy, cmp,  nop, dcp, cpy, cmp,  dec, dcp, //
+    iny, cmp,  dex, axs, cpy, cmp,  dec, dcp, //
+    bne, cmp,  kil, dcp, nop, cmp,  dec, dcp, //
+    cld, cmp,  nop, dcp, nop, cmp,  dec, dcp, //
+    cpx, sbc,  nop, isc, cpx, sbc,  inc, isc, //
+    inx, sbc,  nop, sbc, cpx, sbc,  inc, isc, //
+    beq, sbc,  kil, isc, nop, sbc,  inc, isc, //
+    sed, sbc,  nop, isc, nop, sbc,  inc, isc  //
+};
+
 CPU::CPU(Console *console)
-    : CPUMemory(console), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0),
-      I(0), D(0), B(0), V(0), N(0) {}
+    : CPUMemory(console), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0), D(0), B(0),
+      V(0), N(0) {
+    reset();
+}
 
 CPU::~CPU() {}
 
@@ -27,6 +64,7 @@ uint16_t CPU::read16bug(uint16_t address) {
 void CPU::reset() {
     cycles = 0;
     PC = read16(0xFFFC);
+    // PC = 0xC000;
     SP = 0xFD;
     setFlags(0x24);
 }
@@ -51,10 +89,8 @@ void CPU::printInstruction() {
     if (byte < 3) {
         std::strncpy(w2, "  ", 3);
     }
-    std::sprintf(
-        buffer,
-        "%4X  %s %s %s  %s %28sA:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n",
-        PC, w0, w1, w2, name, "", A, X, Y, flags(), SP, cycles * 3 % 341);
+    std::sprintf(buffer, "%4X  %s %s %s  %s %28sA:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n", PC,
+                 w0, w1, w2, name, "", A, X, Y, flags(), SP, int(cycles * 3 % 341));
     std::printf(buffer);
 }
 
@@ -63,10 +99,15 @@ uint32_t CPU::step() {
         stall--;
         return 1;
     }
-    printInstruction();
+    // printInstruction();
     switch (interrupt) {
-    case CPU::InterruptType::NMI:
+    case InterruptType::NMI:
         nmi();
+        break;
+    case InterruptType::IRQ:
+        irq();
+        break;
+    case InterruptType::None:
         break;
     }
     interrupt = InterruptType::None;
@@ -136,13 +177,11 @@ uint32_t CPU::step() {
         cycles += uint64_t(instructionPageCycle[opcode]);
     }
     StepInfo info{address, PC, mode};
-    (table[opcode])(this, &info);
+    (InstructionTable[opcode])(this, &info);
     return uint32_t(cycles - preCycles);
 }
 
-bool CPU::pageDiffer(uint16_t a, uint16_t b) {
-    return (a & 0xFF00) != (b & 0xFF00);
-}
+bool CPU::pageDiffer(uint16_t a, uint16_t b) { return (a & 0xFF00) != (b & 0xFF00); }
 
 void CPU::addBranchCycles(CPU::StepInfo *info) {
     cycles++;
@@ -233,18 +272,18 @@ void CPU::setZN(uint8_t value) {
 
 void CPU::triggerNMI() { interrupt = InterruptType::NMI; }
 
-// void CPU::triggerIRQ() {
-//     if (I == 0) {
-//         interrupt = InterruptType::IRQ;
-//     }
-// }
+void CPU::triggerIRQ() {
+    if (I == 0) {
+        interrupt = InterruptType::IRQ;
+    }
+}
 
 void CPU::nmi() {
     push16(PC);
     php(this, nullptr);
     PC = read16(NMI_ADDRESS);
-    // I = 1;
-    // cycles += 7;
+    I = 1;
+    cycles += 7;
 }
 
 void CPU::irq() {

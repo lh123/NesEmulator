@@ -20,8 +20,6 @@ public:
 
     uint8_t *prg;
     uint8_t *chr;
-    int mPRGLength;
-    int mCHRLength;
     uint8_t sram[SRAM_SIZE];
 
     uint8_t mapper;
@@ -34,13 +32,15 @@ public:
     Cartridge();
     ~Cartridge();
     bool loadNesFile(const char *path);
-    uint8_t read(uint16_t address);
-    void write(uint16_t address, uint8_t value);
-    uint8_t prgLength() const;
-    uint8_t chrLength() const;
+    // uint8_t read(uint16_t address);
+    // void write(uint16_t address, uint8_t value);
+    int prgLength() const;
+    int chrLength() const;
 
 private:
     INesHeader header;
+    int mPRGLength;
+    int mCHRLength;
 };
 
 #endif // CARTRIDGE_H

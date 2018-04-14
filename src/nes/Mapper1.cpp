@@ -3,21 +3,21 @@
 #include <cstdio>
 
 Mapper1::Mapper1(Cartridge *cartridge)
-    : Mapper(), cartridge(cartridge), shiftRegister(0x10), prgMode(0),
-      chrMode(0), prgBank(0), chrBank0(0), chrBank1(0), prgOffset0(0),
-      prgOffset1(0), chrOffset0(0), chrOffset1(0) {
-    prgOffset1 = cartridge->prgLength() - 0x4000;
+    : Mapper(), cartridge(cartridge), shiftRegister(0x10), control(0), prgMode(0), chrMode(0),
+      prgBank(0), chrBank0(0), chrBank1(0), prgOffsets{0}, chrOffsets{0} {
+    prgOffsets[1] = prgBankOffset(-1);
 }
 
 uint8_t Mapper1::read(uint16_t address) {
-    if (address < 0x1000) {
-        return cartridge->chr[chrOffset0 + address - 0x0000];
-    } else if (address < 0x2000) {
-        return cartridge->chr[chrOffset1 + address - 0x1000];
-    } else if (address >= 0xC000) {
-        return cartridge->prg[prgOffset1 + address - 0xC000];
+    if (address < 0x2000) {
+        uint16_t bank = address / 0x1000;
+        uint16_t offset = address % 0x1000;
+        return cartridge->chr[chrOffsets[bank] + offset];
     } else if (address >= 0x8000) {
-        return cartridge->prg[prgOffset0 + address - 0x8000];
+        address = address - 0x8000;
+        uint16_t bank = address / 0x4000;
+        uint16_t offset = address % 0x4000;
+        return cartridge->prg[prgOffsets[bank] + offset];
     } else if (address >= 0x6000) {
         return cartridge->sram[address - 0x6000];
     } else {
@@ -27,10 +27,10 @@ uint8_t Mapper1::read(uint16_t address) {
 }
 
 void Mapper1::write(uint16_t address, uint8_t value) {
-    if (address < 0x1000) {
-        cartridge->chr[chrOffset0 + address - 0x0000] = value;
-    } else if (address < 0x2000) {
-        cartridge->chr[chrOffset1 + address - 0x1000] = value;
+    if (address < 0x2000) {
+        uint16_t bank = address / 0x1000;
+        uint16_t offset = address % 0x1000;
+        cartridge->chr[chrOffsets[bank] + offset] = value;
     } else if (address >= 0x8000) {
         loadRegister(address, value);
     } else if (address >= 0x6000) {
@@ -40,11 +40,14 @@ void Mapper1::write(uint16_t address, uint8_t value) {
     }
 }
 
+void Mapper1::step() {}
+
 void Mapper1::loadRegister(uint16_t address, uint8_t value) {
-    if (value & 0x80 == 0x80) {
+    if ((value & 0x80) == 0x80) {
         shiftRegister = 0x10;
+        writeControl(control | 0x0C);
     } else {
-        bool complete = shiftRegister & 0x1 == 0x1;
+        bool complete = (shiftRegister & 0x1) == 0x1;
         shiftRegister >>= 1;
         shiftRegister |= (value & 0x1) << 4;
         if (complete) {
@@ -64,15 +67,14 @@ void Mapper1::writeRegister(uint16_t address, uint8_t value) {
     } else if (address <= 0xFFFF) {
         writePRGBank(value);
     } else {
-        std::printf("error: mapper write register at address:0x%04X\n",
-                    address);
+        std::printf("error: mapper write register at address:0x%04X\n", address);
     }
 }
 
 void Mapper1::writeControl(uint8_t value) {
+    control = value;
     chrMode = (value >> 4) & 0x1;
     prgMode = (value >> 2) & 0x3;
-
     uint8_t mirror = value & 0x3;
     switch (mirror) {
     case 0:
@@ -102,34 +104,58 @@ void Mapper1::writeCHRBank1(uint8_t value) {
 }
 
 void Mapper1::writePRGBank(uint8_t value) {
-    prgBank = value;
+    prgBank = value & 0x0F;
     updateOffset();
+}
+
+int Mapper1::prgBankOffset(int index) {
+    if(index >= 0x80) {
+        index -= 0x100;
+    }
+    index %= cartridge->prgLength() / 0x4000;
+    int offset = index * 0x4000;
+    if(offset < 0) {
+        offset += cartridge->prgLength();
+    }
+    return offset;
+}
+
+int Mapper1::chrBankOffset(int index) {
+    if(index >= 0x80) {
+        index -= 0x100;
+    }
+    index %= cartridge->chrLength() / 0x1000;
+    int offset = index * 0x1000;
+    if(offset < 0) {
+        offset += cartridge->chrLength();
+    }
+    return offset;
 }
 
 void Mapper1::updateOffset() {
     switch (prgMode) {
     case 0:
     case 1:
-        prgOffset0 = int(prgBank & 0xFE) * 0x8000;
-        prgOffset1 = prgOffset0 + 0x4000;
+        prgOffsets[0] = prgBankOffset(prgBank & 0xFE);
+        prgOffsets[1] = prgBankOffset(prgBank | 0x01);
         break;
     case 2:
-        prgOffset0 = 0;
-        prgOffset1 = int(prgBank) * 0x4000;
+        prgOffsets[0] = 0;
+        prgOffsets[1] = prgBankOffset(prgBank);
         break;
     case 3:
-        prgOffset0 = int(prgBank) * 0x4000;
-        prgOffset1 = cartridge->prgLength() - 0x4000;
+        prgOffsets[0] = prgBankOffset(prgBank);
+        prgOffsets[1] = prgBankOffset(-1);
         break;
     }
     switch (chrMode) {
     case 0:
-        chrOffset0 = int(chrBank0 & 0xFE) * 0x2000;
-        chrOffset1 = chrOffset0 + 0x1000;
+        chrOffsets[0] = chrBankOffset(chrBank0 & 0xFE);
+        chrOffsets[1] = chrBankOffset(chrBank0 | 0x01);
         break;
     case 1:
-        chrOffset0 = int(chrBank0) * 0x1000;
-        chrOffset1 = int(chrBank1) * 0x1000;
+        chrOffsets[0] = chrBankOffset(chrBank0);
+        chrOffsets[1] = chrBankOffset(chrBank1);
         break;
     }
 }

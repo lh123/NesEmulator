@@ -5,23 +5,19 @@
 
 class Image {
 public:
-    struct RGBA {
-        uint8_t r;
-        uint8_t g;
-        uint8_t b;
-        uint8_t a;
-    };
-
-public:
+    using RGBA = uint32_t;
     Image(int width, int height);
     ~Image();
-    
-    void setRGBA(int x, int y, uint32_t rgba);
+
+    void setRGBA(int x, int y, RGBA rgba);
+    int width() const;
+    int height() const;
+    uint8_t *pixel() const;
 
 private:
-    int width;
-    int height;
-    RGBA *data;
+    int mWidth;
+    int mHeight;
+    uint8_t *data;
 };
 
 #endif

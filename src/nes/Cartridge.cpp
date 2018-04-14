@@ -5,8 +5,8 @@
 const uint32_t NesMagic = 0x1a53454e;
 
 Cartridge::Cartridge()
-    : prg(nullptr), chr(nullptr), mPRGLength(0), mCHRLength(0), sram{0},
-      mapper(0), mirror(0), battery(0), trainer(false) {}
+    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0), trainer(false),
+      mPRGLength(0), mCHRLength(0) {}
 
 Cartridge::~Cartridge() {
     delete[] chr;
@@ -21,7 +21,7 @@ Cartridge::~Cartridge() {
 bool Cartridge::loadNesFile(const char *path) {
     std::FILE *file = std::fopen(path, "rb");
     if (file == nullptr) {
-        std::printf("open file \"%s\" failed!\n");
+        std::printf("open file \"%s\" failed!\n", path);
         return false;
     }
     std::fread(&header.magic, sizeof(header.magic), 1, file);
@@ -44,7 +44,9 @@ bool Cartridge::loadNesFile(const char *path) {
         }
     }
 
-    mapper = (header.controller1 >> 4) | (header.controller2 & 0xF0);
+    uint8_t mapper1 = header.controller1 >> 4;
+    uint8_t mapper2 = header.controller2 >> 4;
+    mapper = mapper1 | (mapper2 << 4);
     mirror = (header.controller1 & 0x1) | ((header.controller1 >> 2) & 0x2);
     battery = (header.controller1 >> 1) & 0x1;
 
@@ -72,41 +74,6 @@ bool Cartridge::loadNesFile(const char *path) {
     return true;
 }
 
-uint8_t Cartridge::read(uint16_t address) {
-    if (address < 0x2000) {
-        return chr[address];
-    } else if (address >= 0x8000) {
-        uint16_t index = (address - 0x8000) % (header.numPRG * 16384);
-        return prg[index];
-    } else if (address >= 0x6000) {
-        uint16_t index = address - 0x6000;
-        return sram[index];
-    } else {
-        std::printf("error: cartridge read at address: %04X\n", address);
-        return 0;
-    }
-}
+int Cartridge::prgLength() const { return mPRGLength; }
 
-void Cartridge::write(uint16_t address, uint8_t value) {
-    if (address < 0x2000) {
-        chr[address] = value;
-    } else if (address >= 0x8000) {
-        // todo
-    } else if (address >= 0x6000) {
-        uint16_t index = address - 0x6000;
-        sram[index] = value;
-    } else {
-        std::printf("error: cartridge read at address: %04X\n", address);
-    }
-}
-
-uint8_t Cartridge::prgLength() const { return mPRGLength; }
-
-uint8_t Cartridge::chrLength() const { return mCHRLength; }
-
-// uint16_t Cartridge::nameTableAddress(uint16_t address) {
-//     address = (address - 0x2000) % 0x1000;
-//     uint16_t table = address / 0x0400;
-//     uint16_t offset = address % 0x0400;
-//     return 0x2000 + MirrorLookUp[mirror][table] * 0x0400 + offset;
-// }
+int Cartridge::chrLength() const { return mCHRLength; }

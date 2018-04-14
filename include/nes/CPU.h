@@ -11,6 +11,7 @@ class CPU : public CPUMemory {
 public:
     static constexpr uint16_t NMI_ADDRESS = 0xFFFA;
     static constexpr uint16_t IRQ_ADDRESS = 0xFFFE;
+    static constexpr int CPU_FREQUENCY = 1789773;
 
     enum class InterruptType { None = 1, NMI, IRQ };
 
@@ -68,7 +69,7 @@ public:
     void setZN(uint8_t value);
 
     void triggerNMI();
-    // void triggerIRQ();
+    void triggerIRQ();
 
     void nmi();
     void irq();

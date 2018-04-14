@@ -3,7 +3,7 @@
 
 Mapper2::Mapper2(Cartridge *cartridge)
     : Mapper(), cartridge(cartridge) {
-    int prgBanks = cartridge->prgLength() / 0x4000;
+    prgBanks = cartridge->prgLength() / 0x4000;
     prgBank1 = 0;
     prgBank2 = prgBanks - 1;
 }
@@ -12,10 +12,10 @@ uint8_t Mapper2::read(uint16_t address) {
     if (address < 0x2000) {
         return cartridge->chr[address];
     } else if (address >= 0xC000) {
-        int index = prgBank2 * 0x4000 + (address - 0xC000);
+        int index = prgBank2 * 0x4000 + int(address - 0xC000);
         return cartridge->prg[index];
     } else if (address >= 0x8000) {
-        int index = prgBank1 * 0x4000 + (address - 0x8000);
+        int index = prgBank1 * 0x4000 + int(address - 0x8000);
         return cartridge->prg[index];
     } else if (address >= 0x6000) {
         int index = address - 0x6000;
@@ -26,11 +26,13 @@ uint8_t Mapper2::read(uint16_t address) {
     }
 }
 
+void Mapper2::step() {}
+
 void Mapper2::write(uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         cartridge->chr[address] = value;
     } else if (address >= 0x8000) {
-        prgBank1 = value;
+        prgBank1 = value % prgBanks;
     } else if (address >= 0x6000) {
         int index = address - 0x6000;
         cartridge->sram[index] = value;
