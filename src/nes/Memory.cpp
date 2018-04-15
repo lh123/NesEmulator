@@ -22,8 +22,7 @@ uint8_t CPUMemory::read(uint16_t address) {
     } else if (address == 0x4014) {
         return console->ppu->readRegister(address);
     } else if (address == 0x4015) {
-        // TODO APU
-        return 0;
+        return console->apu->readRegister(address);
     } else if (address == 0x4016) {
         return console->controller1->read();
     } else if (address == 0x4017) {
@@ -45,16 +44,16 @@ void CPUMemory::write(uint16_t address, uint8_t value) {
     } else if (address < 0x4000) {
         console->ppu->writeRegister(0x2000 + address % 8, value);
     } else if (address < 0x4014) {
-        // TODO APU
+        console->apu->writeRegister(address, value);
     } else if (address == 0x4014) {
         console->ppu->writeRegister(address, value);
     } else if (address == 0x4015) {
-        // TODO APU
+        console->apu->writeRegister(address, value);
     } else if (address == 0x4016) {
         console->controller1->write(value);
         console->controller2->write(value);
     } else if (address == 0x4017) {
-        // TODO APU
+        console->apu->writeRegister(address, value);
     } else if (address < 0x6000) {
         // TODO: I/O register
     } else if (address >= 0x6000) {

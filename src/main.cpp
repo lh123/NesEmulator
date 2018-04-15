@@ -3,7 +3,7 @@
 #include <cstdio>
 
 int main() {
-    Console col{"E:\\VSCode\\NesEmulator\\rom\\smb3.nes"};
+    Console col{"E:\\VSCode\\NesEmulator\\rom\\apu\\apu_test.nes"};
     Window window{&col};
     if (!window.init("NES")) {
         std::printf("window init error\n");

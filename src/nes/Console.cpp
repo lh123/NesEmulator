@@ -8,6 +8,7 @@ Console::Console(const char *path) : ram{0} {
         mapper = Mapper::create(this);
         cpu = new CPU(this);
         ppu = new PPU(this);
+        apu = new APU(this);
         controller1 = new Controller();
         controller2 = new Controller();
     }
@@ -15,10 +16,11 @@ Console::Console(const char *path) : ram{0} {
 
 Console::~Console() {
     if (isSuccess) {
-        Mapper::free(mapper);        
+        Mapper::free(mapper);
         delete controller2;
         delete controller1;
-        delete ppu;           
+        delete apu;
+        delete ppu;
         delete cpu;
     }
 }
@@ -29,6 +31,9 @@ uint32_t Console::step() {
     for (uint32_t i = 0; i < ppuCycles; i++) {
         ppu->step();
         mapper->step();
+    }
+    for (uint32_t i = 0; i < cpuCycles; i++) {
+        apu->step();
     }
     return cpuCycles;
 }

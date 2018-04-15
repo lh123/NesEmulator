@@ -8,7 +8,7 @@ BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj
 
 CXX_FLAGS = -g -Wall -I$(INCLUDE_PATH)
-LD_FLAGS = -L./lib -opengl32 -lglad -lglfw3
+LD_FLAGS = -L./lib -lopengl32 -lglad -lglfw3
 
 all: $(BUILD_DIR)/$(TARGET)
 
@@ -31,7 +31,7 @@ $(OBJS): $(OBJ_DIR)/%.o: ./src/%.cpp
 	$(CXX) -c $(CXX_FLAGS) -o $@ $<
 
 $(BUILD_DIR)/$(TARGET): $(NES_OBJS) $(UI_OBJS) $(OBJS) 
-	$(CXX) $(CXX_FLAGS) $(LD_FLAGS) -o $@ $^
+	$(CXX) $(CXX_FLAGS) -o $@ $^ $(LD_FLAGS)
 
 clean:
 	del build\obj\*.o

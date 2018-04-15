@@ -4,10 +4,11 @@
 #include <cstdint>
 
 #include "nes/CPU.h"
+#include "nes/PPU.h"
+#include "nes/APU.h"
 #include "nes/Cartridge.h"
 #include "nes/Controller.h"
 #include "nes/Mapper.h"
-#include "nes/PPU.h"
 #include "nes/Palette.h"
 
 class Console {
@@ -27,6 +28,7 @@ public:
 public:
     CPU *cpu;
     PPU *ppu;
+    APU *apu;
     Cartridge *cartridge;
     Mapper *mapper;
     Controller *controller1;
