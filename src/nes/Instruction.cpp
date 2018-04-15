@@ -90,7 +90,7 @@ void bpl(CPU *cpu, CPU::StepInfo *info) {
 }
 
 void brk(CPU *cpu, CPU::StepInfo *info) {
-    cpu->push16(cpu->PC);
+    cpu->push16(cpu->PC + 1);
     php(cpu, info);
     sei(cpu, info);
     cpu->PC = cpu->read16(0xFFFE);

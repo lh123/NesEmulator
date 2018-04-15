@@ -55,7 +55,7 @@ uint8_t PPU::readRegister(uint16_t address) {
     case 0x2007:
         return readData();
     default:
-        std::printf("error: ppu read at address: %04X\n", address);
+        std::printf("error: ppu read at address: 0x%04X\n", address);
         return 0;
     }
 }
@@ -88,7 +88,7 @@ void PPU::writeRegister(uint16_t address, uint8_t value) {
         writeDMA(value);
         break;
     default:
-        std::printf("error: ppu write at address: %04X\n", address);
+        std::printf("error: ppu write at address: 0x%04X\n", address);
     }
 }
 
@@ -116,6 +116,12 @@ void PPU::writeMask(uint8_t value) {
     flagBlueTint = (value >> 7) & 0x1;
 }
 
+// VSO. ....
+// |||| ||||
+// |||+-++++- least significant bits previously written into a PPU register
+// ||+------- sprite overflow
+// |+-------- sprite zero hit
+// +--------- vertical bank
 uint8_t PPU::readStatus() {
     uint8_t result = reg & 0x1F;
     result |= flagSpriteOverflow << 5;

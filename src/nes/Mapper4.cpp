@@ -10,7 +10,7 @@ Mapper4::Mapper4(Console *console, Cartridge *cartridge)
     prgOffsets[3] = prgBankOffset(-1);
 }
 
-Mapper4::~Mapper4(){};
+Mapper4::~Mapper4(){}
 
 uint8_t Mapper4::read(uint16_t address) {
     if (address < 0x2000) {
