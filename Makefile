@@ -1,14 +1,15 @@
 PATH = E:/Development/mingw64/bin
 CXX = $(PATH)/g++.exe
 CC = $(PATH)/gcc.exe
-INCLUDE_PATH = ./include
+INCLUDE_PATH = -I./include -IE:/VSCode/CommonLib/include
+LIB_PATH = -LE:/VSCode/CommonLib/lib
 TARGET = nes.exe
 
 BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj
 
-CXX_FLAGS = -g -Wall -I$(INCLUDE_PATH)
-LD_FLAGS = -L./lib -lopengl32 -lglad -lglfw3 -lSDL2main -lSDL2
+CXX_FLAGS = -g -Wall $(INCLUDE_PATH)
+LD_FLAGS = $(LIB_PATH) -lopengl32 -lglad -lglfw3 -lSDL2main -lSDL2
 
 all: $(BUILD_DIR)/$(TARGET)
 
