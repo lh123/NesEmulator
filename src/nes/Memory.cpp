@@ -1,5 +1,11 @@
 #include "nes/Memory.h"
 #include "nes/Console.h"
+#include "nes/CPU.h"
+#include "nes/PPU.h"
+#include "nes/APU.h"
+#include "nes/Mapper.h"
+#include "nes/Controller.h"
+#include "nes/Cartridge.h"
 #include <cstdio>
 
 static const int MirrorLookUp[5][4] = {

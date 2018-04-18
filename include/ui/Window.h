@@ -4,6 +4,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "nes/Console.h"
+#include "ui/Audio.h"
 
 class Window {
 public:
@@ -33,6 +34,7 @@ private:
     Console *console;
     GLFWwindow *window;
     const char *title;
+    Audio *audio;
 };
 
 #endif

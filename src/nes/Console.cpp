@@ -1,6 +1,14 @@
 #include "nes/Console.h"
 #include <cstdio>
 
+#include "nes/CPU.h"
+#include "nes/APU.h"
+#include "nes/PPU.h"
+#include "nes/Cartridge.h"
+#include "nes/Controller.h"
+#include "nes/Mapper.h"
+#include "nes/Palette.h"
+
 Console::Console(const char *path) : ram{0} {
     cartridge = new Cartridge();
     isSuccess = cartridge->loadNesFile(path);
@@ -67,3 +75,11 @@ void Console::setPressed(int controller, Button button, bool pressed) {
 Image *Console::buffer() const { return ppu->front; }
 
 Image::RGBA Console::backgroundColor() const { return palette[ppu->readPalette(0) % 64]; }
+
+void Console::setAudioSampleRate(uint32_t value) {
+    if (value != 0) {
+        apu->setSampleRate(CPU::CPU_FREQUENCY / value);
+    }
+}
+
+AudioBuffer *Console::getAudioBuffer() { return apu->getAudioBuffer(); }

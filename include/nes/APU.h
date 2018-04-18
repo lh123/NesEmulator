@@ -2,6 +2,7 @@
 #define APU_H
 
 #include <cstdint>
+#include "nes/AudioBuffer.h"
 
 class Console;
 class CPU;
@@ -13,12 +14,18 @@ class DMC;
 
 class APU {
 public:
-
 public:
     APU(Console *console);
     ~APU();
 
     void step();
+    void setSampleRate(uint32_t sampleRate);
+    uint8_t readRegister(uint16_t address);
+    void writeRegister(uint16_t address, uint8_t value);
+    
+    AudioBuffer *getAudioBuffer() const;
+
+private:
     void sendSample();
     float output();
 
@@ -29,9 +36,6 @@ public:
     void stepLength();
     void fireIRQ();
 
-    uint8_t readRegister(uint16_t address);
-    void writeRegister(uint16_t address, uint8_t value);
-
     uint8_t readStatus();
 
     void writeControl(uint8_t value);
@@ -39,7 +43,8 @@ public:
 
 private:
     Console *console;
-    double sampleRate;
+    AudioBuffer *audio;
+    uint32_t sampleRate;
     uint64_t cycle;
 
     Pulse *pulse1;      // $4000-$4003
@@ -49,13 +54,13 @@ private:
     DMC *dmc;           // $4010-$4013
 
     uint8_t framePeriod; // step mode (4 or 5)
-    uint8_t frameValue;
+    uint8_t frameCounter;
     bool frameIRQ;
 };
 
 class Pulse {
 public:
-    Pulse();
+    Pulse(uint8_t channel);
     ~Pulse();
 
     void writeControl(uint8_t value);
@@ -64,42 +69,40 @@ public:
     void writeTimerHigh(uint8_t value);
 
     void stepTimer();
+    void stepSequences();
     void stepEnvelope();
     void stepSweep();
     void stepLength();
 
-    void sweep();
-
     uint8_t output();
 
 public:
-    bool enable;
+    bool enabled;
     uint8_t channel;
 
-    bool lengthEnable;
-    uint8_t lengthValue;
+    uint8_t dutyCycle;
+    uint8_t dutyCounter; // Sequence step value
 
-    uint16_t timerPeriod;
-    uint16_t timerValue;
+    bool lengthCounterHalt;
+    uint8_t lengthCounter;
 
-    uint8_t dutyMode;
-    uint8_t dutyValue;
-
-    bool sweepReload;
-    bool sweepEnable;
-    bool sweepNegate;
-    uint8_t sweepShift;
-    uint8_t sweepPeriod;
-    uint8_t sweepValue;
-
-    bool envelopeEnable;
+    bool envelopeEnabled;
     bool envelopeLoop;
     bool envelopeStart;
-    uint8_t envelopePeriod;
-    uint8_t envelopeValue;
-    uint8_t envelopeVolume;
-
+    uint8_t envelopeDividerPeriod;
+    uint8_t envelopeDividerCounter;
+    uint8_t envelopeDecayCounter;
     uint8_t constantVolume;
+
+    uint16_t timerPeriod;
+    uint16_t timerCounter;
+
+    bool sweepEnabled;
+    bool sweepReload;
+    bool sweepNegate;
+    uint8_t sweepShift;
+    uint8_t sweepDividerPeriod;
+    uint8_t sweepDividerCounter;
 };
 
 class Triangle {
@@ -112,23 +115,25 @@ public:
     void writeTimerHigh(uint8_t value);
 
     void stepTimer();
+    void stepSequences();
     void stepLength();
-    void stepCounter();
+    void stepLinearCounter();
+
     uint8_t output();
 
 public:
-    bool enable;
-    bool lengthEnable;
-    uint8_t lengthValue;
+    bool enabled;
+    bool lengthCounterHalt;
+    uint8_t lengthCounter;
 
     uint16_t timerPeriod;
-    uint16_t timerValue;
+    uint16_t timerCounter;
 
-    uint8_t dutyValue;
+    uint8_t linearCounterPeriod;
+    uint8_t linearCounter;
+    bool linearCounterReload;
 
-    uint8_t counterPeriod;
-    uint8_t counterValue;
-    bool counterReload;
+    uint8_t sequencesStep;
 };
 
 class Noise {
@@ -141,31 +146,32 @@ public:
     void writeLength(uint8_t value);
 
     void stepTimer();
+    void stepShiftRegister();
     void stepEnvelope();
     void stepLength();
 
     uint8_t output();
 
 public:
-    bool enable;
+    bool enabled;
     bool mode;
 
     uint16_t shiftRegister;
 
-    bool lenghtEnable;
-    uint8_t lengthValue;
+    bool lenghtCounterHalt;
+    uint8_t lengthCounter;
 
     uint16_t timerPeriod;
-    uint16_t timerValue;
+    uint16_t timerCounter;
 
-    bool envelopeEnable;
+    bool envelopeEnabled;
     bool envelopeLoop;
     bool envelopeStart;
-    uint8_t envelopePeriod;
-    uint8_t envelopeValue;
-    uint8_t envelopeVolume;
-
+    uint8_t envelopeDividerPeriod;
+    uint8_t envelopeDividerCounter;
+    uint8_t envelopeDecayCounter;
     uint8_t constantVolume;
+    uint8_t envelopeOutputVolume;
 };
 
 class DMC {
@@ -174,7 +180,7 @@ public:
     ~DMC();
 
     void writeControl(uint8_t value);
-    void writeValue(uint8_t value);
+    void writeDirectLoad(uint8_t value);
     void writeAddress(uint8_t value);
     void writeLength(uint8_t value);
 
@@ -184,26 +190,35 @@ public:
     void stepReader();
     void stepShifter();
 
-    uint8_t output();
-
 public:
-    bool enable;
-    uint8_t value;
+    bool enabled;
+    bool loop;
+    bool irqEnable;
+    bool interrupt;
+    uint8_t rateIndex;
+    uint8_t frequency;
 
     uint16_t sampleAddress;
     uint16_t sampleLength;
 
-    uint16_t currentAddress;
-    uint16_t currentLength;
+    uint8_t sampleBuffer;
+    uint8_t sampleBufferBitCount;
 
+    // reader unit
+    uint16_t addressCounter;
+    uint16_t bytesRemainingCounter;
+
+    // timer unit
+    uint8_t timerPeriod;
+    uint8_t timerCounter;
+
+    // output unit
     uint8_t shiftRegister;
-    uint8_t bitCount;
+    uint8_t bitsRemainingCounter;
+    uint8_t outputLevel;
+    bool silence;
+    bool outputCycleEnd;
 
-    uint8_t tickPeriod;
-    uint8_t tickValue;
-
-    bool loop;
-    bool irq;
 private:
     CPU *cpu;
 };

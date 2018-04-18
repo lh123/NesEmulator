@@ -1,5 +1,7 @@
 #include "nes/Mapper4.h"
 #include "nes/Console.h"
+#include "nes/PPU.h"
+#include "nes/CPU.h"
 
 Mapper4::Mapper4(Console *console, Cartridge *cartridge)
     : console(console), cartridge(cartridge), _register(0), _registers{0}, prgMode(0),

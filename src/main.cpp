@@ -2,8 +2,8 @@
 #include "ui/Window.h"
 #include <cstdio>
 
-int main() {
-    Console col{"E:\\VSCode\\NesEmulator\\rom\\apu\\apu_test.nes"};
+int main(int argc, char *argv[]) {
+    Console col{"E:\\VSCode\\NesEmulator\\rom\\hdl.nes"};
     Window window{&col};
     if (!window.init("NES")) {
         std::printf("window init error\n");

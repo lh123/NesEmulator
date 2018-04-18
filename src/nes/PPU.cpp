@@ -1,5 +1,7 @@
 #include "nes/PPU.h"
 #include "nes/Console.h"
+#include "nes/CPU.h"
+#include "nes/Palette.h"
 #include <cstdio>
 
 PPU::PPU(Console *console)

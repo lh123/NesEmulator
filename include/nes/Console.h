@@ -2,14 +2,17 @@
 #define CONSOLE_H
 
 #include <cstdint>
+#include "nes/Image.h"
+#include "nes/AudioBuffer.h"
 
-#include "nes/CPU.h"
-#include "nes/PPU.h"
-#include "nes/APU.h"
-#include "nes/Cartridge.h"
-#include "nes/Controller.h"
-#include "nes/Mapper.h"
-#include "nes/Palette.h"
+class CPU;
+class PPU;
+class APU;
+class Cartridge;
+class Controller;
+enum class Button;
+class Mapper;
+class Palette;
 
 class Console {
 public:
@@ -20,11 +23,15 @@ public:
     void reset();
     uint32_t step();
     uint32_t stepFrame();
+
     void stepSeconds(double seconds);
     void setPressed(int controller, Button button, bool pressed);
+
     Image *buffer() const;
     Image::RGBA backgroundColor() const;
 
+    void setAudioSampleRate(uint32_t value);
+    AudioBuffer *getAudioBuffer();
 public:
     CPU *cpu;
     PPU *ppu;

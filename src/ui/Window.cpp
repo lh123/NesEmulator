@@ -1,12 +1,19 @@
 #include "ui/Window.h"
 #include <cstdio>
+#include "nes/Controller.h"
 
-Window::Window(Console *console) : console(console), window(nullptr) {}
+Window::Window(Console *console) : console(console), window(nullptr) {
+    audio = new Audio(console);
+    console->setAudioSampleRate(44100);
+}
 
-Window::~Window() {}
+Window::~Window() { delete audio; }
 
 bool Window::init(const char *title) {
     if (!glfwInit()) {
+        return false;
+    }
+    if (!audio->init()) {
         return false;
     }
 
@@ -70,6 +77,8 @@ void Window::drawQuad() {
 }
 
 void Window::run() {
+    audio->openAudioDevice();
+    audio->play();
     glEnable(GL_TEXTURE_2D);
     GLuint texture = createTexture();
 
