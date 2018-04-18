@@ -3,7 +3,16 @@
 #include <cstdio>
 
 int main(int argc, char *argv[]) {
-    Console col{"E:\\VSCode\\NesEmulator\\rom\\hdl.nes"};
+    if (argc != 2) {
+        std::printf("please enter rom path\n");
+        std::getchar();
+        return 0;
+    }
+    Console col(argv[1]);
+    if(!col.isOpenRom()) {
+        std::getchar();
+        return 0;
+    }
     Window window{&col};
     if (!window.init("NES")) {
         std::printf("window init error\n");

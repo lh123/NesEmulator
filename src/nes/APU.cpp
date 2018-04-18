@@ -1,6 +1,7 @@
 #include "nes/APU.h"
 #include "nes/Console.h"
 #include "nes/CPU.h"
+#include "nes/Filter.h"
 #include <cstdio>
 
 static const uint8_t lengthTable[32] = {
@@ -41,7 +42,10 @@ static void initTable() {
 }
 
 APU::APU(Console *console)
-    : console(console), sampleRate(0), cycle(0), framePeriod(0), frameCounter(0), frameIRQ(false) {
+    : console(console), sampleRate(0), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0),
+      frameIRQ(false), filterChain{new Filter(Filter::Type::HighPass),
+                                   new Filter(Filter::Type::HighPass),
+                                   new Filter(Filter::Type::LowPass)} {
     initTable();
     pulse1 = new Pulse(1);
     pulse2 = new Pulse(2);
@@ -49,7 +53,7 @@ APU::APU(Console *console)
     noise = new Noise();
     dmc = new DMC(console->cpu);
 
-    audio = new AudioBuffer(44100);
+    audio = new AudioBuffer(8192);
 }
 
 APU::~APU() {
@@ -58,28 +62,29 @@ APU::~APU() {
     delete triangle;
     delete noise;
     delete dmc;
+
+    for (int i = 0; i < 3; i++) {
+        delete filterChain[i];
+    }
 }
 
 // call peer cpu cycle
 void APU::step() {
+    cycle++;
     stepTimer();
     if (cycle == 7457) {
         // 3728.5
         stepEnvelope();
-        cycle++;
     } else if (cycle == 14913) {
         // 7456.5
         stepEnvelope();
         stepLength();
         stepSweep();
-        cycle++;
     } else if (cycle == 22371) {
         // 1118.5
         stepEnvelope();
-        cycle++;
     } else if (cycle == 29828) {
         // 14914
-        cycle++;
     } else if (cycle == 29829) {
         // 14914.5
         if (framePeriod == 4) {
@@ -87,14 +92,11 @@ void APU::step() {
             stepLength();
             stepSweep();
         }
-        cycle++;
     } else if (cycle == 29830) {
         // 14915
         if (framePeriod == 4) {
             cycle = 0;
             fireIRQ();
-        } else {
-            cycle++;
         }
     } else if (cycle == 37281) {
         // 18640.5
@@ -103,26 +105,32 @@ void APU::step() {
             stepLength();
             stepSweep();
         }
-        cycle++;
     } else if (cycle == 37282) {
         // 18641
         if (framePeriod == 5) {
             cycle = 0;
-        } else {
-            cycle++;
         }
-    } else {
-        cycle++;
     }
-    if (cycle % sampleRate == 0) {
+    sampleCounter++;
+    if (sampleCounter == CPU::CPU_FREQUENCY / sampleRate) {
         sendSample();
+        sampleCounter = 0;
     }
 }
 
-void APU::setSampleRate(uint32_t value) { sampleRate = value; }
+void APU::setSampleRate(uint32_t value) {
+    sampleRate = value;
+    filterChain[0]->setParamter(value, 90);
+    filterChain[1]->setParamter(value, 440);
+    filterChain[2]->setParamter(value, 14000);
+}
 
 void APU::sendSample() {
-    audio->push(output());
+    float x = output();
+    for (int i = 0; i < 3; i++) {
+        x = filterChain[i]->step(x);
+    }
+    audio->push(x);
 }
 
 AudioBuffer *APU::getAudioBuffer() const { return audio; }
@@ -136,9 +144,6 @@ float APU::output() {
 
     float pulseOut = pulseTable[p1 + p2];
     float tndOut = tndTable[3 * t + 2 * n + d];
-    // if (pulseOut + tndOut > 0) {
-    //     std::printf("%f ", pulseOut + tndOut);
-    // }
     return pulseOut + tndOut;
 }
 
@@ -414,14 +419,12 @@ void Pulse::writeTimerHigh(uint8_t value) {
 void Pulse::stepTimer() {
     if (timerCounter == 0) {
         timerCounter = timerPeriod;
-        stepSequences();
+        // stepSequences();
+        dutyCounter = (dutyCounter + 1) % 8;
     } else {
         timerCounter--;
     }
 }
-
-// sequencer is clocked by an 11-bit timer.
-void Pulse::stepSequences() { dutyCounter = (dutyCounter + 1) % 8; }
 
 // clocked by the frame counter
 void Pulse::stepEnvelope() {
@@ -436,7 +439,7 @@ void Pulse::stepEnvelope() {
         } else {
             envelopeDividerCounter = envelopeDividerPeriod;
             // clock decay level counter.
-            if (envelopeDividerCounter > 0) {
+            if (envelopeDecayCounter > 0) {
                 envelopeDecayCounter--;
             } else {
                 if (envelopeLoop) {
@@ -450,12 +453,7 @@ void Pulse::stepEnvelope() {
 // frame counter sends a half-frame clock
 void Pulse::stepSweep() {
     if (sweepDividerCounter > 0) {
-        if (sweepReload) {
-            sweepDividerCounter = sweepDividerPeriod;
-            sweepReload = false;
-        } else {
-            sweepDividerCounter--;
-        }
+        sweepDividerCounter--;
     } else {
         if (sweepEnabled) {
             // adjusted
@@ -472,11 +470,15 @@ void Pulse::stepSweep() {
         sweepDividerCounter = sweepDividerPeriod;
         sweepReload = false;
     }
+    if (sweepReload) {
+        sweepDividerCounter = sweepDividerPeriod;
+        sweepReload = false;
+    }
 }
 
 // clocked by the frame counter
 void Pulse::stepLength() {
-    if (!lengthCounterHalt && lengthCounter > 0) {
+    if (enabled && !lengthCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -502,8 +504,9 @@ uint8_t Pulse::output() {
 }
 
 Triangle::Triangle()
-    : enabled(false), lengthCounterHalt(false), lengthCounter(0), timerPeriod(0), timerCounter(0),
-      linearCounterPeriod(0), linearCounter(0), linearCounterReload(false), sequencesStep(0) {}
+    : enabled(false), lengthCounterHalt(false), control(false), lengthCounter(0), timerPeriod(0),
+      timerCounter(0), linearCounterPeriod(0), linearCounter(0), linearCounterReload(false),
+      sequencesStep(0) {}
 
 Triangle::~Triangle() {}
 
@@ -515,6 +518,7 @@ Triangle::~Triangle() {}
  */
 void Triangle::writeControl(uint8_t value) {
     lengthCounterHalt = ((value >> 7) & 0x1) == 0x1;
+    control = ((value >> 7) & 0x1) == 0x1;
     linearCounterPeriod = value & 0x7F;
 }
 
@@ -547,17 +551,15 @@ void Triangle::stepTimer() {
         // sequencer is clocked by the timer as long as both the linear counter and the length
         // counter are nonzero
         if (lengthCounter > 0 && linearCounter > 0) {
-            stepSequences();
+            sequencesStep = (sequencesStep + 1) % 32;
         }
     } else {
         timerCounter--;
     }
 }
 
-void Triangle::stepSequences() { sequencesStep = (sequencesStep + 1) % 32; }
-
 void Triangle::stepLength() {
-    if (!lengthCounterHalt && lengthCounter > 0) {
+    if (enabled && !lengthCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -572,7 +574,7 @@ void Triangle::stepLinearCounter() {
         }
     }
     // If the control flag is clear, the linear counter reload flag is cleared.
-    if (!lengthCounterHalt) {
+    if (!control) {
         linearCounterReload = false;
     }
 }
@@ -646,6 +648,7 @@ void Noise::stepTimer() {
     }
 }
 
+// clocked by timer
 void Noise::stepShiftRegister() {
     // bit 6 if Mode flag is set, otherwise bit 1.
     uint8_t bit = 0;
@@ -673,7 +676,7 @@ void Noise::stepEnvelope() {
         } else {
             envelopeDividerCounter = envelopeDividerPeriod;
             // clock decay level counter.
-            if (envelopeDividerCounter > 0) {
+            if (envelopeDecayCounter > 0) {
                 envelopeDecayCounter--;
             } else {
                 if (envelopeLoop) {
@@ -685,7 +688,7 @@ void Noise::stepEnvelope() {
 }
 
 void Noise::stepLength() {
-    if (!lenghtCounterHalt && lengthCounter > 0) {
+    if (enabled && !lenghtCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }

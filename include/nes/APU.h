@@ -2,6 +2,7 @@
 #define APU_H
 
 #include <cstdint>
+#include <functional>
 #include "nes/AudioBuffer.h"
 
 class Console;
@@ -11,6 +12,7 @@ class Pulse;
 class Triangle;
 class Noise;
 class DMC;
+class Filter;
 
 class APU {
 public:
@@ -22,12 +24,12 @@ public:
     void setSampleRate(uint32_t sampleRate);
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
-    
+
     AudioBuffer *getAudioBuffer() const;
+    float output();
 
 private:
     void sendSample();
-    float output();
 
     void stepFrameCounter();
     void stepTimer();
@@ -45,6 +47,7 @@ private:
     Console *console;
     AudioBuffer *audio;
     uint32_t sampleRate;
+    uint32_t sampleCounter;
     uint64_t cycle;
 
     Pulse *pulse1;      // $4000-$4003
@@ -56,6 +59,8 @@ private:
     uint8_t framePeriod; // step mode (4 or 5)
     uint8_t frameCounter;
     bool frameIRQ;
+
+    Filter *filterChain[3];
 };
 
 class Pulse {
@@ -69,7 +74,6 @@ public:
     void writeTimerHigh(uint8_t value);
 
     void stepTimer();
-    void stepSequences();
     void stepEnvelope();
     void stepSweep();
     void stepLength();
@@ -115,7 +119,6 @@ public:
     void writeTimerHigh(uint8_t value);
 
     void stepTimer();
-    void stepSequences();
     void stepLength();
     void stepLinearCounter();
 
@@ -124,6 +127,7 @@ public:
 public:
     bool enabled;
     bool lengthCounterHalt;
+    bool control;
     uint8_t lengthCounter;
 
     uint16_t timerPeriod;

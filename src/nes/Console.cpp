@@ -8,6 +8,7 @@
 #include "nes/Controller.h"
 #include "nes/Mapper.h"
 #include "nes/Palette.h"
+#include "nes/Filter.h"
 
 Console::Console(const char *path) : ram{0} {
     cartridge = new Cartridge();
@@ -76,10 +77,8 @@ Image *Console::buffer() const { return ppu->front; }
 
 Image::RGBA Console::backgroundColor() const { return palette[ppu->readPalette(0) % 64]; }
 
-void Console::setAudioSampleRate(uint32_t value) {
-    if (value != 0) {
-        apu->setSampleRate(CPU::CPU_FREQUENCY / value);
-    }
-}
+void Console::setAudioSampleRate(uint32_t value) { apu->setSampleRate(value); }
 
 AudioBuffer *Console::getAudioBuffer() { return apu->getAudioBuffer(); }
+
+bool Console::isOpenRom() const { return isSuccess; }

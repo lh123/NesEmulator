@@ -9,13 +9,11 @@ Audio::~Audio() {}
 void fillAudio(void *udata, uint8_t *stream, int len) {
     std::memset(stream, 0, len);
     Audio *audio = reinterpret_cast<Audio *>(udata);
-    uint16_t *pFStream = reinterpret_cast<uint16_t *>(stream);
+    float *pStram = reinterpret_cast<float *>(stream);
     AudioBuffer *buffer = audio->console->getAudioBuffer();
-    int index = 0;
-    while (!buffer->isEmpty() && index < len / 2) {
-        uint16_t o = (buffer->pop()) * 0xFFFF;
-        *(pFStream + index) = o;
-        index++;
+    len = len / sizeof(float);
+    for (int i = 0; i < len; i++) {
+        pStram[i] = buffer->pop();
     }
 }
 
@@ -28,10 +26,10 @@ bool Audio::init() {
 
 bool Audio::openAudioDevice() {
     SDL_AudioSpec spec;
-    spec.freq = 44100;
-    spec.format = AUDIO_U16SYS;
+    spec.freq = 48000;
+    spec.format = AUDIO_F32SYS;
     spec.channels = 1;
-    spec.samples = 44100;
+    spec.samples = 4096;
     spec.callback = fillAudio;
     spec.userdata = this;
 

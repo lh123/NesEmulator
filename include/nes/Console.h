@@ -13,6 +13,7 @@ class Controller;
 enum class Button;
 class Mapper;
 class Palette;
+class Filter;
 
 class Console {
 public:
@@ -32,6 +33,8 @@ public:
 
     void setAudioSampleRate(uint32_t value);
     AudioBuffer *getAudioBuffer();
+
+    bool isOpenRom() const;
 public:
     CPU *cpu;
     PPU *ppu;

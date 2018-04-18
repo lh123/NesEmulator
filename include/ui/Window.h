@@ -1,8 +1,8 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
-#include "glad/glad.h"
-#include "GLFW/glfw3.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "nes/Console.h"
 #include "ui/Audio.h"
 

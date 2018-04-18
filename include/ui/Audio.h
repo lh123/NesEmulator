@@ -3,7 +3,7 @@
 #define SDL_MAIN_HANDLED
 
 #include "nes/Console.h"
-#include "SDL2/SDL.h"
+#include <SDL2/SDL.h>
 
 class Audio {
 public:
