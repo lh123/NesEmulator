@@ -53,7 +53,7 @@ APU::APU(Console *console)
     noise = new Noise();
     dmc = new DMC(console->cpu);
 
-    audio = new AudioBuffer(8192);
+    audio = new AudioBuffer(4096);
 }
 
 APU::~APU() {
@@ -70,46 +70,12 @@ APU::~APU() {
 
 // call peer cpu cycle
 void APU::step() {
-    cycle++;
     stepTimer();
-    if (cycle == 7457) {
-        // 3728.5
-        stepEnvelope();
-    } else if (cycle == 14913) {
-        // 7456.5
-        stepEnvelope();
-        stepLength();
-        stepSweep();
-    } else if (cycle == 22371) {
-        // 1118.5
-        stepEnvelope();
-    } else if (cycle == 29828) {
-        // 14914
-    } else if (cycle == 29829) {
-        // 14914.5
-        if (framePeriod == 4) {
-            stepEnvelope();
-            stepLength();
-            stepSweep();
-        }
-    } else if (cycle == 29830) {
-        // 14915
-        if (framePeriod == 4) {
-            cycle = 0;
-            fireIRQ();
-        }
-    } else if (cycle == 37281) {
-        // 18640.5
-        if (framePeriod == 5) {
-            stepEnvelope();
-            stepLength();
-            stepSweep();
-        }
-    } else if (cycle == 37282) {
-        // 18641
-        if (framePeriod == 5) {
-            cycle = 0;
-        }
+    cycle++;
+    if (framePeriod == 4) {
+        stepFourStepFrame();
+    } else {
+        stepFiveStepFrame();
     }
     sampleCounter++;
     if (sampleCounter == CPU::CPU_FREQUENCY / sampleRate) {
@@ -147,8 +113,54 @@ float APU::output() {
     return pulseOut + tndOut;
 }
 
+void APU::stepFourStepFrame() {
+    if (cycle == 3728.5 * 2) {
+        stepQuarterFrame();
+    } else if (cycle == 7456.5 * 2) {
+        stepQuarterFrame();
+        stepHalfFrame();
+    } else if (cycle == 11185.5 * 2) {
+        stepQuarterFrame();
+    } else if (cycle == 14914 * 2) {
+        fireIRQ();
+    } else if (cycle == 14914.5 * 2) {
+        stepQuarterFrame();
+        stepHalfFrame();
+        fireIRQ();
+    } else if (cycle == 14915 * 2) {
+        cycle = 0;
+        fireIRQ();
+    }
+}
+
+void APU::stepFiveStepFrame() {
+    if (cycle == 3728.5 * 2) {
+        stepQuarterFrame();
+    } else if (cycle == 7456.5 * 2) {
+        stepQuarterFrame();
+        stepHalfFrame();
+    } else if (cycle == 11185.5 * 2) {
+        stepQuarterFrame();
+    } else if (cycle == 18640.5 * 2) {
+        stepQuarterFrame();
+        stepHalfFrame();
+    } else if (cycle == 18641 * 2) {
+        cycle = 0;
+    }
+}
+
+void APU::stepQuarterFrame() {
+    stepEnvelope();
+    triangle->stepLinearCounter();
+}
+
+void APU::stepHalfFrame() {
+    stepLength();
+    stepSweep();
+}
+
 void APU::stepTimer() {
-    if (cycle % 2 == 0) {
+    if (cycle % 1 == 0) {
         pulse1->stepTimer();
         pulse2->stepTimer();
         noise->stepTimer();
@@ -161,7 +173,6 @@ void APU::stepTimer() {
 void APU::stepEnvelope() {
     pulse1->stepEnvelope();
     pulse2->stepEnvelope();
-    triangle->stepLinearCounter();
     noise->stepEnvelope();
 }
 
@@ -339,18 +350,18 @@ void APU::writeFrameCounter(uint8_t value) {
     frameIRQ = ((value >> 6) & 0x1) == 0;
     // 5-step mode has extra step
     if (framePeriod == 5) {
-        stepEnvelope();
-        stepSweep();
-        stepLength();
+        stepQuarterFrame();
+        stepHalfFrame();
     }
 }
 
 Pulse::Pulse(uint8_t channel)
-    : enabled(false), channel(channel), dutyCycle(0), dutyCounter(0), lengthCounterHalt(false),
+    : enabled(false), channel(channel), dutyCycle(0), sequenceStep(0), lengthCounterHalt(false),
       lengthCounter(0), envelopeEnabled(false), envelopeLoop(false), envelopeStart(false),
       envelopeDividerPeriod(0), envelopeDividerCounter(0), envelopeDecayCounter(0),
-      constantVolume(0), timerPeriod(0), timerCounter(0), sweepEnabled(false), sweepReload(0),
-      sweepNegate(0), sweepShift(0), sweepDividerPeriod(0), sweepDividerCounter(0) {}
+      constantVolume(0), timerPeriod(0), timerCounter(0), targetPeriod(0),
+      sweepEnabled(false), sweepReload(0), sweepNegate(0), sweepShift(0), sweepDividerPeriod(0),
+      sweepDividerCounter(0) {}
 
 Pulse::~Pulse() {}
 
@@ -396,7 +407,10 @@ void Pulse::writeSweep(uint8_t value) {
  * $4002/$4006
  * 	LLLL LLLL   timer Low 8 bits
  */
-void Pulse::writeTimerLow(uint8_t value) { timerPeriod = (timerPeriod & 0xFF00) | value; }
+void Pulse::writeTimerLow(uint8_t value) {
+    timerPeriod = (timerPeriod & 0xFF00) | value;
+    // calculationTargetPeriod();
+}
 
 /**
  * $4003/$4007
@@ -410,7 +424,8 @@ void Pulse::writeTimerHigh(uint8_t value) {
     if (enabled) {
         lengthCounter = lengthTable[value >> 3];
         timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
-        dutyCounter = 0;
+        // calculationTargetPeriod();
+        sequenceStep = 0;
         envelopeStart = true;
     }
 }
@@ -420,7 +435,7 @@ void Pulse::stepTimer() {
     if (timerCounter == 0) {
         timerCounter = timerPeriod;
         // stepSequences();
-        dutyCounter = (dutyCounter + 1) % 8;
+        sequenceStep = (sequenceStep + 1) % 8;
     } else {
         timerCounter--;
     }
@@ -452,20 +467,13 @@ void Pulse::stepEnvelope() {
 
 // frame counter sends a half-frame clock
 void Pulse::stepSweep() {
+    calculationTargetPeriod();    
     if (sweepDividerCounter > 0) {
         sweepDividerCounter--;
     } else {
         if (sweepEnabled) {
             // adjusted
-            uint8_t changeAmount = timerPeriod >> sweepShift;
-            if (sweepNegate) {
-                timerPeriod -= changeAmount;
-                if (channel == 1) {
-                    timerPeriod--;
-                }
-            } else {
-                timerPeriod += changeAmount;
-            }
+            timerPeriod = targetPeriod;
         }
         sweepDividerCounter = sweepDividerPeriod;
         sweepReload = false;
@@ -483,6 +491,18 @@ void Pulse::stepLength() {
     }
 }
 
+void Pulse::calculationTargetPeriod() {
+    uint8_t changeAmount = timerPeriod >> sweepShift;
+    if (sweepNegate) {
+        targetPeriod = timerPeriod - changeAmount;
+        if (channel == 1) {
+            targetPeriod--;
+        }
+    } else {
+        targetPeriod = timerPeriod + changeAmount;
+    }
+}
+
 uint8_t Pulse::output() {
     if (!enabled) {
         return 0;
@@ -490,7 +510,7 @@ uint8_t Pulse::output() {
     if (lengthCounter == 0) {
         return 0;
     }
-    if (dutyTable[dutyCycle][dutyCounter] == 0) {
+    if (dutyTable[dutyCycle][sequenceStep] == 0) {
         return 0;
     }
     if (timerPeriod < 8 || timerPeriod > 0x7FF) {
@@ -795,6 +815,7 @@ void DMC::stepReader() {
     if (sampleBufferBitCount == 0 && bytesRemainingCounter > 0) {
         cpu->stall += 4;
         sampleBuffer = cpu->read(addressCounter);
+        sampleBufferBitCount = 8;
         addressCounter++;
         if (addressCounter == 0) {
             addressCounter = 0x8000;

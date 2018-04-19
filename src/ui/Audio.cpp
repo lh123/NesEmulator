@@ -24,9 +24,9 @@ bool Audio::init() {
     return true;
 }
 
-bool Audio::openAudioDevice() {
+bool Audio::openAudioDevice(uint16_t sampleRate) {
     SDL_AudioSpec spec;
-    spec.freq = 48000;
+    spec.freq = sampleRate;
     spec.format = AUDIO_F32SYS;
     spec.channels = 1;
     spec.samples = 4096;

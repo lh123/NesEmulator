@@ -77,7 +77,7 @@ void Window::drawQuad() {
 }
 
 void Window::run() {
-    audio->openAudioDevice();
+    audio->openAudioDevice(44100);
     audio->play();
     glEnable(GL_TEXTURE_2D);
     GLuint texture = createTexture();

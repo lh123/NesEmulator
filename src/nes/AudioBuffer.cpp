@@ -31,4 +31,6 @@ float AudioBuffer::pop() {
     }
 }
 
-bool AudioBuffer::isEmpty() { return dataCount == 0; }
+bool AudioBuffer::isEmpty() const { return dataCount == 0; }
+
+int AudioBuffer::size() const { return dataCount; }

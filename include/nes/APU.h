@@ -31,7 +31,11 @@ public:
 private:
     void sendSample();
 
-    void stepFrameCounter();
+    void stepFourStepFrame();
+    void stepFiveStepFrame();
+    void stepQuarterFrame();
+    void stepHalfFrame();
+
     void stepTimer();
     void stepEnvelope();
     void stepSweep();
@@ -78,6 +82,8 @@ public:
     void stepSweep();
     void stepLength();
 
+    void calculationTargetPeriod();    
+
     uint8_t output();
 
 public:
@@ -85,7 +91,7 @@ public:
     uint8_t channel;
 
     uint8_t dutyCycle;
-    uint8_t dutyCounter; // Sequence step value
+    uint8_t sequenceStep; // Sequence step value
 
     bool lengthCounterHalt;
     uint8_t lengthCounter;
@@ -100,6 +106,7 @@ public:
 
     uint16_t timerPeriod;
     uint16_t timerCounter;
+    uint16_t targetPeriod;
 
     bool sweepEnabled;
     bool sweepReload;

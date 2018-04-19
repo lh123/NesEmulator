@@ -10,7 +10,8 @@ public:
 
     void push(float data);
     float pop();
-    bool isEmpty();
+    bool isEmpty() const;
+    int size() const;
 
 private:
     float *buffer;

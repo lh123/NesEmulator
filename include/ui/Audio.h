@@ -11,7 +11,7 @@ public:
     ~Audio();
 
     bool init();
-    bool openAudioDevice();
+    bool openAudioDevice(uint16_t sampleRate);
     void play();
     void pause();
     void close();
