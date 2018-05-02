@@ -42,7 +42,7 @@ uint32_t Console::step() {
         mapper->step();
     }
     for (uint32_t i = 0; i < cpuCycles; i++) {
-        apu->step();
+        // apu->step();
     }
     return cpuCycles;
 }

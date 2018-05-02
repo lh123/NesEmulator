@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #include "nes/Console.h"
 #include "ui/Audio.h"
+#include "ui/GameView.h"
 
 class Window {
 public:
@@ -14,7 +15,7 @@ public:
     static constexpr int PADDING = 0;
 
 public:
-    Window(Console *console);
+    Window();
     ~Window();
 
     bool init(const char *title);
@@ -22,19 +23,24 @@ public:
     void run();
 
 private:
-    bool readKey(int key);
-    void readKeys();
+
 
     GLuint createTexture();
     void setTexture(GLuint texture, Image *image);
 
     void drawQuad();
 
+    void initGUI();
+    void renderGUI();
+    void destoryGUI();
+
 private:
     Console *console;
     GLFWwindow *window;
     const char *title;
     Audio *audio;
+
+    GameView *gameView;
 };
 
 #endif

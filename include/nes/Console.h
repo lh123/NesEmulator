@@ -21,7 +21,6 @@ public:
     Console(const char *path);
     ~Console();
 
-    void reset();
     uint32_t step();
     uint32_t stepFrame();
 

@@ -2,12 +2,17 @@
 #include <cstdio>
 #include "nes/Controller.h"
 
-Window::Window(Console *console) : console(console), window(nullptr) {
-    audio = new Audio(console);
-    console->setAudioSampleRate(44100);
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw_gl3.h>
+#include "ui/ImGuiExt.h"
+#include "ui/GameView.h"
+
+Window::Window() : console(nullptr), window(nullptr), audio(nullptr) {
+    // audio = new Audio(console);
+    // console->setAudioSampleRate(44100);
 }
 
-Window::~Window() { delete audio; }
+Window::~Window() { delete gameView; }
 
 bool Window::init(const char *title) {
     if (!glfwInit()) {
@@ -29,6 +34,8 @@ bool Window::init(const char *title) {
     if (!gladLoadGLLoader((GLADloadproc(glfwGetProcAddress)))) {
         return false;
     }
+
+    glfwSwapInterval(1);
     return true;
 }
 
@@ -77,38 +84,92 @@ void Window::drawQuad() {
 }
 
 void Window::run() {
-    audio->openAudioDevice(44100);
-    audio->play();
-    glEnable(GL_TEXTURE_2D);
-    GLuint texture = createTexture();
+    initGUI();
+    // audio->openAudioDevice(44100);
+    // audio->play();
+    // glEnable(GL_TEXTURE_2D);
+    // GLuint texture = createTexture();
 
-    double timestamp = glfwGetTime();
+    // double timestamp = glfwGetTime();
 
     while (!glfwWindowShouldClose(window)) {
-        double now = glfwGetTime();
-        double elapsed = now - timestamp;
-        timestamp = now;
-        readKeys();
-        console->stepSeconds(elapsed);
-        setTexture(texture, console->buffer());
+        // double now = glfwGetTime();
+        // double elapsed = now - timestamp;
+        // timestamp = now;
+        glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-        drawQuad();
+
+        renderGUI();
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    destoryGUI();
+    glfwTerminate();
 }
 
-bool Window::readKey(int key) { return glfwGetKey(window, key) == GLFW_PRESS; }
+void Window::close() {}
 
-void Window::readKeys() {
-    console->setPressed(1, Button::A, readKey(GLFW_KEY_Z));
-    console->setPressed(1, Button::B, readKey(GLFW_KEY_X));
-    console->setPressed(1, Button::Select, readKey(GLFW_KEY_S));
-    console->setPressed(1, Button::Start, readKey(GLFW_KEY_ENTER));
-    console->setPressed(1, Button::Up, readKey(GLFW_KEY_UP));
-    console->setPressed(1, Button::Down, readKey(GLFW_KEY_DOWN));
-    console->setPressed(1, Button::Left, readKey(GLFW_KEY_LEFT));
-    console->setPressed(1, Button::Right, readKey(GLFW_KEY_RIGHT));
+void Window::initGUI() {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    // ImGuiIO &io = ImGui::GetIO();
+
+    ImGui_ImplGlfwGL3_Init(window, true);
+
+    ImGui::StyleColorsDark();
+    gameView = new GameView();
 }
 
-void Window::close() { glfwTerminate(); }
+void Window::renderGUI() {
+
+    ImGui_ImplGlfwGL3_NewFrame();
+    char buffer[125] = {0};
+
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open...", "Ctrl+O")) {
+                if (ImGui::showFileDialog(buffer, 125)) {
+                    gameView->setGamePath(buffer);
+                    gameView->show();
+                }
+            }
+            if (ImGui::MenuItem("Close")) {
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
+            ImGui::EndMenu();
+        }
+
+        if(ImGui::BeginMenu("Multiplayer")) {
+            if(ImGui::MenuItem("Create Server")) {
+
+            }
+            if(ImGui::MenuItem("Connect to Server")) {
+                
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Setting")) {
+            if (ImGui::MenuItem("KeyMap")) {
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    if (gameView->isShow()) {
+        gameView->render();
+    }
+
+    ImGui::Render();
+
+    ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void Window::destoryGUI() {
+    ImGui_ImplGlfwGL3_Shutdown();
+    ImGui::DestroyContext();
+}
