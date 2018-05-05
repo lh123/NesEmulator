@@ -3,9 +3,16 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "nes/Console.h"
+#include "nes/GameManager.h"
+
 #include "ui/Audio.h"
 #include "ui/GameView.h"
+#include "ui/CreateServerView.h"
+#include "ui/JoinServerView.h"
+#include "ui/ID.h"
+
+#include "net/Server.h"
+#include "net/Client.h"
 
 class Window {
 public:
@@ -23,16 +30,10 @@ public:
     void run();
 
 private:
-
-
-    GLuint createTexture();
-    void setTexture(GLuint texture, Image *image);
-
-    void drawQuad();
-
     void initGUI();
     void renderGUI();
     void destoryGUI();
+    void onClick(UI_ID id, void *data);
 
 private:
     Console *console;
@@ -41,6 +42,13 @@ private:
     Audio *audio;
 
     GameView *gameView;
+    CreateServerView *createServerView;
+    JoinServerView *joinServerView;
+
+    Server *server;
+    Client *client;
+
+    GameManager *gameManager;
 };
 
 #endif

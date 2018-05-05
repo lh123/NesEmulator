@@ -4,18 +4,32 @@
 
 class UIComponent {
 public:
-    UIComponent();
-    ~UIComponent();
+    UIComponent(const char *id);
+    
+    virtual ~UIComponent();
 
-    virtual void render() = 0;
-
+    void setWindowFlags(ImGuiWindowFlags flags);
     bool isShow() const;
+    bool isFocused() const;
 
-    virtual void show();
-    virtual void close();
+    void show();
+    void close();
+    void render();
 
 protected:
-    bool mShow;
+    virtual void onShow();
+    virtual void onClose();
+    virtual void onFocusedChanged(bool focused);
+    virtual void onBeforeRender();
+    virtual void onRender() = 0;
+    virtual void onAfterRender();
+
+private:
+    bool mShowed;
+    bool mFocused;
+    const char *mId;
+
+    ImGuiWindowFlags mFlags;
 };
 
 #endif

@@ -2,42 +2,40 @@
 #define GAME_VIEW_H
 
 #include "ui/UIComponent.h"
-#include "nes/Console.h"
-
+#include "nes/GameManager.h"
 #include <string>
 #include <thread>
+#include <mutex>
 
 class GameView : public UIComponent {
 public:
     static constexpr float DEFAULT_WIDTH = 256;
     static constexpr float DEFAULT_HEIGHT = 240;
 
-    GameView();
+    GameView(GameManager *manager);
+    
     virtual ~GameView();
 
-    void setGamePath(const char *path);
-    virtual void render() override;
-    virtual void show() override;
+protected:
+    virtual void onShow() override;
+    virtual void onClose() override;
+    virtual void onFocusedChanged(bool focused) override;
+    virtual void onBeforeRender() override;
+    virtual void onRender() override;
+    virtual void onAfterRender() override;
 
 private:
-    void step();
-    void start(const char *path);
-    void resume();
-    void pause();
-    void destory();
-
     bool readKey(int key);
     void readKeys();
 
 private:
     std::string nesName;
-    bool isPause;
-    bool isCollapsed;
-    bool isFocused;
     unsigned int gameTexture;
+    GameManager *gameManager;
 
-    Console *console;
-    std::thread *gameThread;
+    Image frameBuffer;
+
+    std::mutex mFrameMutex;
 };
 
 #endif

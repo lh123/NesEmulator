@@ -6,8 +6,12 @@
 class Image {
 public:
     using RGBA = uint32_t;
+    Image();
     Image(int width, int height);
+    Image(const Image &other);
     ~Image();
+
+    Image &operator=(const Image &other);
 
     void setRGBA(int x, int y, RGBA rgba);
     int width() const;
