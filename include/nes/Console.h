@@ -2,7 +2,7 @@
 #define CONSOLE_H
 
 #include <cstdint>
-#include "nes/Image.h"
+#include "nes/Frame.h"
 #include "nes/AudioBuffer.h"
 
 class CPU;
@@ -27,8 +27,8 @@ public:
     void stepSeconds(double seconds);
     void setPressed(int controller, Button button, bool pressed);
 
-    Image *buffer() const;
-    Image::RGBA backgroundColor() const;
+    Frame *buffer() const;
+    Frame::RGBA backgroundColor() const;
 
     void setAudioSampleRate(uint32_t value);
     AudioBuffer *getAudioBuffer();

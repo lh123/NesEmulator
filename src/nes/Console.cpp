@@ -73,9 +73,9 @@ void Console::setPressed(int controller, Button button, bool pressed) {
     }
 }
 
-Image *Console::buffer() const { return ppu->front; }
+Frame *Console::buffer() const { return ppu->front; }
 
-Image::RGBA Console::backgroundColor() const { return palette[ppu->readPalette(0) % 64]; }
+Frame::RGBA Console::backgroundColor() const { return palette[ppu->readPalette(0) % 64]; }
 
 void Console::setAudioSampleRate(uint32_t value) { apu->setSampleRate(value); }
 

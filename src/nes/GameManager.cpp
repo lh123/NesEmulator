@@ -8,21 +8,18 @@ GameManager::GameManager()
 GameManager::~GameManager() { stop(); }
 
 bool GameManager::startGame(std::string path) {
-    if (mConsole == nullptr) {
+    if (!mRunning) {
         mConsole = new Console(path.c_str());
         if (!mConsole->isOpenRom()) {
             delete mConsole;
-            mConsole = nullptr;
-            return false;
         } else {
             mRunning = true;
             mPause = false;
             std::thread gameThread([this]() { handleGameThread(); });
             gameThread.detach();
-            return true;
         }
     }
-    return false;
+    return mRunning;
 }
 
 void GameManager::pause() {
@@ -44,18 +41,19 @@ void GameManager::stop() {
         mRunning = false;
         mPause = true;
         std::lock_guard<std::mutex> lock(mConsoleMutex);
-        if (mConsole != nullptr) {
-            delete mConsole;
-            mConsole = nullptr;
-        }
+        delete mConsole;
     }
 }
 
+bool GameManager::isPause() const { return mPause; }
+
+bool GameManager::isStop() const { return !mRunning; }
+
 void GameManager::setKeyPressed(int player, Button button, bool pressed) {
-    if (player > 1) {
+    if (player > 2) {
         return;
     }
-    if (player == 0) {
+    if (player == 1) {
         if (mPlayOneKeyBuffer[(int)button] == pressed) {
             return;
         } else {
@@ -97,14 +95,12 @@ void GameManager::handleGameThread() {
         Action *action = nullptr;
         mActionQueueMutex.lock();
         if (!mActionQueue.empty()) {
-            std::cout << "proecess Action\n count: " << mActionQueue.size() << "\n";
             action = mActionQueue.front();
             mActionQueue.pop();
         }
         mActionQueueMutex.unlock();
         if (action != nullptr) {
             if (action->type == Action::Key) {
-
                 processKeyAction(reinterpret_cast<KeyAction *>(action));
             }
         }
@@ -114,7 +110,7 @@ void GameManager::handleGameThread() {
 
         if (frameDeltaTime >= 1000 / 60) {
             if (mFrameListener != nullptr) {
-                mFrameListener(mConsole->buffer());
+                mFrameListener(*mConsole->buffer());
             }
             frameLastTime = currentTime;
         }

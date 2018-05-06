@@ -1,6 +1,6 @@
 #ifndef PPU_H
 #define PPU_H
-#include "nes/Image.h"
+#include "nes/Frame.h"
 #include "nes/Memory.h"
 #include <cstdint>
 
@@ -84,8 +84,8 @@ private:
     uint8_t paletteData[PALETTE_DATA_SIZE];
     uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
-    Image *front;
-    Image *back;
+    Frame *front;
+    Frame *back;
 
     // PPU registers
     uint16_t v; // current vram address

@@ -3,22 +3,20 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "nes/GameManager.h"
+#include <mutex>
 
-#include "ui/Audio.h"
-#include "ui/GameView.h"
 #include "ui/CreateServerView.h"
 #include "ui/JoinServerView.h"
 #include "ui/ID.h"
 
-#include "net/Server.h"
-#include "net/Client.h"
+#include "nes/GameManager.h"
+#include "net/GameProxy.h"
 
 class Window {
 public:
     static constexpr int WIDTH = 256;
     static constexpr int HEIGHT = 240;
-    static constexpr int SCALE = 3;
+    static constexpr int SCALE = 2;
     static constexpr int PADDING = 0;
 
 public:
@@ -33,22 +31,38 @@ private:
     void initGUI();
     void renderGUI();
     void destoryGUI();
+
+    void processGameFrame(Frame frame);
+    void processGameKey(Button button, bool pressed);
+    void renderGameFrame();
+
     void onClick(UI_ID id, void *data);
 
+    void startGame(std::string path);
+    void stopGame();
+
+    void startGameHost(unsigned short port);
+    void stopGameHost();
+
+    void connectToHost(std::string ip, unsigned short port);
+    void disconnect();
+
+    bool readKey(int key);
+    void readKeys();
+
 private:
-    Console *console;
-    GLFWwindow *window;
-    const char *title;
-    Audio *audio;
+    GLFWwindow *mWindow;
+    const char *mTitle;
 
-    GameView *gameView;
-    CreateServerView *createServerView;
-    JoinServerView *joinServerView;
+    CreateServerView *mCreateServerView;
+    JoinServerView *mJoinServerView;
 
-    Server *server;
-    Client *client;
+    GameManager *mGameManager;
+    GameProxy *mGameProxy;
 
-    GameManager *gameManager;
+    Frame mFrameBuffer;
+    std::mutex mFrameBufferMutex;
+    unsigned int mFrameTexture;
 };
 
 #endif

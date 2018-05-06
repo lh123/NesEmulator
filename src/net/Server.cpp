@@ -8,6 +8,9 @@ Server::Server() : mRunning(false), mGenerateIdCounter(0) {}
 Server::~Server(){};
 
 bool Server::startServer(unsigned short port) {
+    if (mRunning) {
+        return false;
+    }
     WORD sockVersion = MAKEWORD(2, 2);
     WSADATA wsaData;
     if (::WSAStartup(sockVersion, &wsaData) != 0) {
@@ -63,31 +66,23 @@ void Server::stopServer() {
     std::cout << "server stop\n";
 }
 
-void Server::sendDataById(int clientId, const char *data, int size) {
-    if (clientId < 0) {
-        std::cout << "Invalid Id: " << clientId << "\n";
-        return;
-    }
-    int index = findClientIndexById(clientId);
-    if (index >= 0) {
-        auto toClient = mClientList[index];
-        sendData(toClient, data, size);
-    }
-}
+bool Server::isRunning() const { return mRunning; }
 
-void Server::sendDataToAll(const char *data, int size) {
+void Server::sendDataToOther(int clientId, const char *data, int size) {
     std::lock_guard<std::mutex> lock(mClientListMutex);
     for (auto client : mClientList) {
-        sendData(client, data, size);
+        if (client->id != clientId) {
+            sendDataInternal(client->socket, data, size);
+        }
     }
 }
 
-void Server::sendData(const Client *client, const char *data, int size) {
+void Server::sendDataInternal(SOCKET socket, const char *data, int size) {
     std::lock_guard<std::mutex> lock(mSendMutex);
     int sendByteSize = 0;
     int errorTimes = 0;
     while (sendByteSize < size) {
-        int ret = ::send(client->socket, data + sendByteSize, size - sendByteSize, 0);
+        int ret = ::send(socket, data + sendByteSize, size - sendByteSize, 0);
         if (ret == SOCKET_ERROR) {
             errorTimes++;
             if (errorTimes >= 3) {
@@ -98,6 +93,26 @@ void Server::sendData(const Client *client, const char *data, int size) {
             sendByteSize += ret;
         }
     }
+}
+
+bool Server::recvDataInternal(SOCKET socket, char *data, int size) {
+    bool success = true;
+    int recvByte = 0;
+    int errorTimes = 0;
+    while (recvByte < size) {
+        int ret = ::recv(socket, data + recvByte, size - recvByte, 0);
+        if (ret == SOCKET_ERROR) {
+            errorTimes++;
+            if (errorTimes >= 3) {
+                std::cout << "SOCKET_ERROR\n";
+                success = false;
+                break;
+            }
+        } else {
+            recvByte += ret;
+        }
+    }
+    return success;
 }
 
 int Server::findClientIndexById(int clientId) {
@@ -130,53 +145,77 @@ void Server::handleAcceptThread() {
 
             std::cout << "client connect\n";
 
-            std::lock_guard<std::mutex> lock(mClientListMutex);
-            mClientList.push_back(newClient);
+            mClientListMutex.lock();
+            if (mClientList.size() < 2) {
+                mClientList.push_back(newClient);
 
-            std::thread clientThread([this, newClient]() { handleClientThread(newClient); });
-            clientThread.detach();
+                mClientListMutex.unlock();
+
+                std::thread clientThread([this, newClient]() { handleClientThread(newClient); });
+                clientThread.detach();
+
+                PacketHead head(PacketType::ClientConnect);
+                ClientInfoPacket packet;
+                packet.clientId = newClient->id;
+                ::strcpy(packet.ip, newClient->ipAddr.c_str());
+                head.size = sizeof(packet);
+                sendDataToOther(newClient->id, reinterpret_cast<char *>(&head), sizeof(head));
+                sendDataToOther(newClient->id, reinterpret_cast<char *>(&packet), sizeof(packet));
+            } else {
+
+                mClientListMutex.unlock();
+
+                std::cout << "server full\n";
+                ::closesocket(newSocket);
+                delete newClient;
+            }
         }
     }
 }
 
 void Server::handleClientThread(Client *client) {
-
-    char *buffer = new char[BUFFER_SIZE];
     while (client->running && mRunning) {
         PacketHead head;
-        int ret = ::recv(client->socket, reinterpret_cast<char *>(&head), sizeof(PacketHead), 0);
-        if (ret == SOCKET_ERROR) {
-            client->running = false;
+        if (recvDataInternal(client->socket, reinterpret_cast<char *>(&head), sizeof(head))) {
+            if (head.magic == PacketHead::MAGIC) {
+                sendDataToOther(client->id, reinterpret_cast<char *>(&head), sizeof(head));
+                char *buffer = new char[head.size];
+                if (recvDataInternal(client->socket, buffer, head.size)) {
+                    sendDataToOther(client->id, buffer, head.size);
+                } else {
+                    client->running = false;
+                    std::cout << "Socket Error\n";
+                }
+                delete[] buffer;
+            } else {
+                std::cout << "Invalid Head\n";
+            }
         } else {
-            // if (std::strcmp(head.magic, PacketHead::MAGIC) == 0) {
-            //     ret = ::recv(client->socket, buffer, head.size, 0);
-            //     if (ret == SOCKET_ERROR) {
-            //         client->running = false;
-            //     } else {
-            //         if (head.target == PacketHead::TARGET_ALL) {
-            //             sendDataToAll(reinterpret_cast<char *>(&head), sizeof(head));
-            //             sendDataToAll(buffer, ret);
-            //         } else {
-            //             sendDataById(head.target, reinterpret_cast<char *>(&head), sizeof(head));
-            //             sendDataById(head.target, buffer, ret);
-            //         }
-            //     }
-            // }
+            client->running = false;
         }
     }
-
-    delete[] buffer;
 
     mClientListMutex.lock();
     for (auto iter = mClientList.begin(); iter != mClientList.end(); iter++) {
         auto temp = *iter;
         if (temp->id == client->id) {
-            delete temp;
             mClientList.erase(iter);
             break;
         }
     }
     mClientListMutex.unlock();
+
+    std::cout << "client disconnect\n";
+    PacketHead head(PacketType::ClientDisconnect);
+    ClientInfoPacket packet;
+    packet.clientId = client->id;
+    ::strcpy(packet.ip, client->ipAddr.c_str());
+    head.size = sizeof(packet);
+    sendDataToOther(client->id, reinterpret_cast<char *>(&head), sizeof(head));
+    sendDataToOther(client->id, reinterpret_cast<char *>(&packet), sizeof(packet));
+
+    ::closesocket(client->socket);
+    delete client;
 
     notifyClientThreadQuit();
 }

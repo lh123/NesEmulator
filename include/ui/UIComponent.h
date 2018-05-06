@@ -5,7 +5,7 @@
 class UIComponent {
 public:
     UIComponent(const char *id);
-    
+
     virtual ~UIComponent();
 
     void setWindowFlags(ImGuiWindowFlags flags);

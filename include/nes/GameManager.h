@@ -25,7 +25,7 @@ struct KeyAction : public Action {
 
 class GameManager {
 public:
-    using FrameListener = std::function<void(const Image *)>;
+    using FrameListener = std::function<void(Frame)>;
 
     GameManager();
     ~GameManager();
@@ -34,6 +34,9 @@ public:
     void pause();
     void resume();
     void stop();
+
+    bool isPause() const;
+    bool isStop() const;
 
     void setKeyPressed(int player, Button key, bool pressed);
 

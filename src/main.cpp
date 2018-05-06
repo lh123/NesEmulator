@@ -21,20 +21,25 @@ int main(int argc, char *argv[]) {
     //     std::cin.get();
     //     std::cin.get();
     //     server.stopServer();
-    //     while(1) {}
+    //     while (1) {
+    //     }
     // } else {
     //     Client client;
     //     if (client.connect("127.0.0.1", 5000)) {
     //         client.setDataRecvListener([](const char *data, int size) { std::cout << data << std::endl; });
+    //         client.setClientConnectListener([](ClientInfoPacket *packet) {
+    //             std::cout << "new client conncet" << std::endl;
+    //             std::cout << "ip: " << packet->ip << "\nid: " << packet->clientId << std::endl;
+    //         });
+
+    //         client.setClientDisconnectListener([](ClientInfoPacket *packet) {
+    //             std::cout << "client disconncet" << std::endl;
+    //             std::cout << "ip: " << packet->ip << "\nid: " << packet->clientId << std::endl;
+    //         });
     //         while (1) {
-    //             // std::cout << "please enter id:";
-    //             int id;
-    //             std::cin >> id;
-    //             client.sendData(reinterpret_cast<const char *>(&id), sizeof(id));
-    //             // std::cout << "please enter msg:\n";
-    //             std::string input;
-    //             std::cin >> input;
-    //             client.sendData(reinterpret_cast<const char *>(input.c_str()), input.size() + 1);
+    //             std::string msg;
+    //             std::cin >> msg;
+    //             client.sendData(msg.c_str(), msg.size() + 1);
     //         }
     //     }
     // }

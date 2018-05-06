@@ -6,11 +6,11 @@
 #include <condition_variable>
 #include <vector>
 
-#include "net/PacketHead.h"
+#include "net/Packet.h"
 
 class Server {
 public:
-    static constexpr int BUFFER_SIZE = 1024;
+    static constexpr int BUFFER_SIZE = 1024000;
 
     struct Client {
         int id;
@@ -25,11 +25,13 @@ public:
     bool startServer(unsigned short port);
     void stopServer();
 
-private:
-    void sendDataById(int clientId, const char *data, int size);
-    void sendDataToAll(const char *data, int size);
-    void sendData(const Client *client, const char *data, int size);
+    bool isRunning() const;
 
+private:
+    void sendDataToOther(int clientId, const char *data, int size);
+
+    void sendDataInternal(SOCKET socket, const char *data, int size);
+    bool recvDataInternal(SOCKET socket, char *data, int size);
     int findClientIndexById(int clientId);
 
     void handleAcceptThread();
