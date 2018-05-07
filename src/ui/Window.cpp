@@ -20,8 +20,8 @@ bool Window::init(const char *title) {
     //     return false;
     // }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     mWindow = glfwCreateWindow(WIDTH * SCALE, HEIGHT * SCALE, title, nullptr, nullptr);
@@ -41,8 +41,6 @@ bool Window::init(const char *title) {
 
 void Window::run() {
     initGUI();
-    // audio->openAudioDevice(44100);
-    // audio->play();
 
     while (!glfwWindowShouldClose(mWindow)) {
         glClearColor(0, 0, 0, 1);
@@ -64,8 +62,6 @@ void Window::initGUI() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
-    // ImGuiIO &io = ImGui::GetIO();
-
     ImGui_ImplGlfwGL3_Init(mWindow, true);
 
     ImGui::StyleColorsDark();
@@ -76,7 +72,7 @@ void Window::initGUI() {
     mCreateServerView->addClickListener([this](UI_ID id, void *data) { onClick(id, data); });
     mJoinServerView->addClickListener([this](UI_ID id, void *data) { onClick(id, data); });
 
-    glCreateTextures(GL_TEXTURE_2D, 1, &mFrameTexture);
+    glGenTextures(1, &mFrameTexture);
     glBindTexture(GL_TEXTURE_2D, mFrameTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -277,16 +273,15 @@ void Window::renderGameFrame() {
     ImGui::SetNextWindowSize(ImVec2(WIDTH * SCALE, HEIGHT * SCALE - 20));
     ImGui::Begin("##GameView", nullptr,
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoResize);
+                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     if (!mGameManager->isStop() || (mGameProxy != nullptr && mGameProxy->currentMode() == GameMode::Client)) {
         readKeys();
         std::lock_guard<std::mutex> lock(mFrameBufferMutex);
         glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE,
                      mFrameBuffer.pixel());
         ImGui::Image(reinterpret_cast<void *>(mFrameTexture), ImGui::GetContentRegionAvail());
-
         if (mGameProxy != nullptr && mGameProxy->currentMode() == GameMode::Host) {
             mGameProxy->sendFrameInfoToServer(&mFrameBuffer);
         }

@@ -3,7 +3,8 @@
 #include <iostream>
 #include <string.h>
 
-GameProxy::GameProxy(GameMode mode) : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false} {
+GameProxy::GameProxy(GameMode mode)
+    : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mFrameSkip(DEFAULT_FRAME_SKIP) {
     mServer = new Server;
     mClient = new Client;
     mClient->setDataRecvListener([this](const char *data, int size) { this->handleDataRecv(data, size); });
@@ -73,15 +74,20 @@ void GameProxy::sendKeyInfoToServer(Button button, bool pressed) {
 }
 
 void GameProxy::sendFrameInfoToServer(const Frame *frame) {
-    GamePacketHead head;
-    head.type = GamePacketType::Frame;
-    head.size = sizeof(GameFramePacket);
+    if (mFrameSkip > 0) {
+        mFrameSkip--;
+    } else {
+        mFrameSkip = DEFAULT_FRAME_SKIP;
+        GamePacketHead head;
+        head.type = GamePacketType::Frame;
+        head.size = sizeof(GameFramePacket);
 
-    GameFramePacket body;
-    ::memcpy(body.imageData, frame->pixel(), sizeof(body.imageData));
+        GameFramePacket body;
+        ::memcpy(body.imageData, frame->pixel(), sizeof(body.imageData));
 
-    mClient->sendData(reinterpret_cast<char *>(&head), sizeof(GamePacketHead));
-    mClient->sendData(reinterpret_cast<char *>(&body), sizeof(GameFramePacket));
+        mClient->sendData(reinterpret_cast<char *>(&head), sizeof(GamePacketHead));
+        mClient->sendData(reinterpret_cast<char *>(&body), sizeof(GameFramePacket));
+    }
 }
 
 void GameProxy::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }

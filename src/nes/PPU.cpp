@@ -4,6 +4,8 @@
 #include "nes/Palette.h"
 #include <cstdio>
 
+#include <chrono>
+
 PPU::PPU(Console *console)
     : PPUMemory(console), cycle(0), scanLine(0), frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0),
       x(0), w(0), f(0), reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),

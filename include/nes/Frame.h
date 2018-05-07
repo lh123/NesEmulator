@@ -7,7 +7,7 @@ class Frame {
 public:
     static constexpr int WIDTH = 256;
     static constexpr int HEIGHT = 240;
-    static constexpr int SIZE = WIDTH * HEIGHT * 4;
+    static constexpr int SIZE = WIDTH * HEIGHT * 3;
 
     using RGBA = uint32_t;
     Frame();
