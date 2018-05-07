@@ -8,7 +8,7 @@
 #include "nes/Controller.h"
 #include "ui/ImGuiExt.h"
 
-Window::Window() : mWindow(nullptr), mGameProxy(nullptr) { mGameManager = new GameManager; }
+Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local) { mGameManager = new GameManager; }
 
 Window::~Window() { delete mGameManager; }
 
@@ -120,34 +120,32 @@ void Window::onClick(UI_ID id, void *data) {
 }
 
 void Window::startGame(std::string path) {
-    if (mGameProxy == nullptr) {
-        stopGame();
-        mGameManager->startGame(path);
-    } else {
-        if (mGameProxy->currentMode() == GameMode::Host) {
-            stopGame();
+    if (mGameType == GameType::Host || mGameType == GameType::Local) {
+        if (mGameManager->isStop()) {
             mGameManager->startGame(path);
         }
     }
 }
 
 void Window::stopGame() {
-    if (!mGameManager->isStop()) {
-        mGameManager->stop();
+    if (mGameType == GameType::Host || mGameType == GameType::Local) {
+        if (!mGameManager->isStop()) {
+            mGameManager->stop();
+        }
     }
 }
 
 void Window::startGameHost(unsigned short port) {
-    if (mGameProxy != nullptr) {
-        if (mGameProxy->currentMode() == GameMode::Host) {
-            mGameProxy->stopServer();
-        } else {
-            mGameProxy->disconnect();
-        }
-        delete mGameProxy;
-        mGameProxy = nullptr;
+    if (mGameType == GameType::Host) {
+        return;
     }
-    mGameProxy = new GameProxy(GameMode::Host);
+    mGameType = GameType::Host;
+
+    if (mGameProxy != nullptr) {
+        return;
+    }
+
+    mGameProxy = new GameProxy(GameProxyMode::Host);
     mGameProxy->startServer(port);
 
     mGameProxy->setOnKeyListener([this](Button button, bool presses) {
@@ -159,38 +157,49 @@ void Window::startGameHost(unsigned short port) {
 }
 
 void Window::stopGameHost() {
-    if (mGameProxy != nullptr) {
-        if (mGameProxy->currentMode() == GameMode::Host) {
-            mGameProxy->stopServer();
-            delete mGameProxy;
-            mGameProxy = nullptr;
-        }
+    if (mGameType != GameType::Host) {
+        return;
     }
+    mGameType = GameType::Local;
+    if (mGameProxy == nullptr) {
+        return;
+    }
+
+    mGameProxy->stopServer();
+    delete mGameProxy;
+    mGameProxy = nullptr;
 }
 
 void Window::connectToHost(std::string ip, unsigned short port) {
-    if (mGameProxy != nullptr) {
-        if (mGameProxy->currentMode() == GameMode::Host) {
-            mGameProxy->stopServer();
-        } else {
-            mGameProxy->disconnect();
-        }
-        delete mGameProxy;
-        mGameProxy = nullptr;
+    if (mGameType == GameType::Client) {
+        return;
     }
-    mGameProxy = new GameProxy(GameMode::Client);
+
+    mGameType = GameType::Client;
+
+    if (mGameProxy != nullptr) {
+        return;
+    }
+
+    mGameProxy = new GameProxy(GameProxyMode::Client);
     mGameProxy->connectTo(ip, port);
     mGameProxy->setOnFrameListener([this](Frame frame) { processGameFrame(std::move(frame)); });
 }
 
 void Window::disconnect() {
-    if (mGameProxy != nullptr) {
-        if (mGameProxy->currentMode() == GameMode::Client) {
-            mGameProxy->disconnect();
-            delete mGameProxy;
-            mGameProxy = nullptr;
-        }
+    if (mGameType != GameType::Client) {
+        return;
     }
+
+    mGameType = GameType::Local;
+
+    if (mGameProxy == nullptr) {
+        return;
+    }
+
+    mGameProxy->disconnect();
+    delete mGameProxy;
+    mGameProxy = nullptr;
 }
 
 void Window::renderGUI() {
@@ -200,11 +209,16 @@ void Window::renderGUI() {
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open...", "Ctrl+O")) {
+            if (ImGui::MenuItem("Open", nullptr, false, mGameType != GameType::Client)) {
                 if (ImGui::showFileDialog(buffer, 125)) {
                     startGame(buffer);
                 }
             }
+
+            if (ImGui::MenuItem("Stop", nullptr, false, !mGameManager->isStop())) {
+                stopGame();
+            }
+
             if (ImGui::MenuItem("Close")) {
                 glfwSetWindowShouldClose(mWindow, GLFW_TRUE);
             }
@@ -212,12 +226,23 @@ void Window::renderGUI() {
         }
 
         if (ImGui::BeginMenu("Multiplayer")) {
-            if (ImGui::MenuItem("Create Server")) {
-                mCreateServerView->show();
+            if (mGameType == GameType::Local) {
+                if (ImGui::MenuItem("Create Server")) {
+                    mCreateServerView->show();
+                }
+                if (ImGui::MenuItem("Connect to Server", nullptr, false, mGameManager->isStop())) {
+                    mJoinServerView->show();
+                }
+            } else if (mGameType == GameType::Host) {
+                if (ImGui::MenuItem("Stop Server")) {
+                    stopGameHost();
+                }
+            } else {
+                if (ImGui::MenuItem("Disconnect")) {
+                    disconnect();
+                }
             }
-            if (ImGui::MenuItem("Connect to Server")) {
-                mJoinServerView->show();
-            }
+
             ImGui::EndMenu();
         }
 
@@ -254,7 +279,7 @@ void Window::processGameKey(Button button, bool pressed) {
         // Local
         mGameManager->setKeyPressed(1, button, pressed);
     } else {
-        if (mGameProxy->currentMode() == GameMode::Host) {
+        if (mGameProxy->currentMode() == GameProxyMode::Host) {
             // Host
             mGameManager->setKeyPressed(1, button, pressed);
         } else {
@@ -275,14 +300,14 @@ void Window::renderGameFrame() {
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
                      ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    if (!mGameManager->isStop() || (mGameProxy != nullptr && mGameProxy->currentMode() == GameMode::Client)) {
+    if (!mGameManager->isStop() || (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Client)) {
         readKeys();
         std::lock_guard<std::mutex> lock(mFrameBufferMutex);
         glBindTexture(GL_TEXTURE_2D, mFrameTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE,
                      mFrameBuffer.pixel());
         ImGui::Image(reinterpret_cast<void *>(mFrameTexture), ImGui::GetContentRegionAvail());
-        if (mGameProxy != nullptr && mGameProxy->currentMode() == GameMode::Host) {
+        if (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Host) {
             mGameProxy->sendFrameInfoToServer(&mFrameBuffer);
         }
     }

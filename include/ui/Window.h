@@ -12,6 +12,8 @@
 #include "nes/GameManager.h"
 #include "net/GameProxy.h"
 
+enum class GameType { Local, Host, Client };
+
 class Window {
 public:
     static constexpr int WIDTH = 256;
@@ -59,6 +61,7 @@ private:
 
     GameManager *mGameManager;
     GameProxy *mGameProxy;
+    GameType mGameType;
 
     Frame mFrameBuffer;
     std::mutex mFrameBufferMutex;

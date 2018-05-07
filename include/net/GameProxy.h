@@ -8,7 +8,7 @@
 #include "net/Server.h"
 #include "net/Client.h"
 
-enum class GameMode { Host, Client };
+enum class GameProxyMode { Host, Client };
 
 class GameProxy {
 public:
@@ -17,7 +17,7 @@ public:
 
     static constexpr int DEFAULT_FRAME_SKIP = 2;
 
-    GameProxy(GameMode mode);
+    GameProxy(GameProxyMode mode);
     ~GameProxy();
 
     bool startServer(unsigned short port);
@@ -32,7 +32,7 @@ public:
     void setOnFrameListener(FrameListener listener);
     void setOnKeyListener(KeyListener listener);
 
-    GameMode currentMode() const;
+    GameProxyMode currentMode() const;
 
 private:
     void handleDataRecv(const char *data, int size);
@@ -42,7 +42,7 @@ private:
     void handleGameAudio(const char *data, int size);
 
 private:
-    GameMode mMode;
+    GameProxyMode mMode;
 
     std::string mServerIp;
     unsigned short mServerPort;

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string.h>
 
-GameProxy::GameProxy(GameMode mode)
+GameProxy::GameProxy(GameProxyMode mode)
     : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mFrameSkip(DEFAULT_FRAME_SKIP) {
     mServer = new Server;
     mClient = new Client;
@@ -13,7 +13,7 @@ GameProxy::GameProxy(GameMode mode)
 GameProxy::~GameProxy() { delete mClient; }
 
 bool GameProxy::startServer(unsigned short port) {
-    if (mMode != GameMode::Host) {
+    if (mMode != GameProxyMode::Host) {
         return false;
     }
     if (!mServer->isRunning()) {
@@ -30,7 +30,7 @@ bool GameProxy::startServer(unsigned short port) {
 }
 
 void GameProxy::stopServer() {
-    if (mMode != GameMode::Host) {
+    if (mMode != GameProxyMode::Host) {
         return;
     }
     if (mServer->isRunning()) {
@@ -94,7 +94,7 @@ void GameProxy::setOnFrameListener(FrameListener listener) { mFrameListener = li
 
 void GameProxy::setOnKeyListener(KeyListener listener) { mKeyListener = listener; }
 
-GameMode GameProxy::currentMode() const { return mMode; }
+GameProxyMode GameProxy::currentMode() const { return mMode; }
 
 void GameProxy::handleDataRecv(const char *data, int size) {
     if (!mHaveRecvPacketHead) {
