@@ -7,10 +7,13 @@
 
 #include "ui/CreateServerView.h"
 #include "ui/JoinServerView.h"
+#include "ui/KeyMapView.h"
 #include "ui/ID.h"
 
 #include "nes/GameManager.h"
 #include "net/GameProxy.h"
+
+#include "ui/Config.h"
 
 enum class GameType { Local, Host, Client };
 
@@ -51,13 +54,18 @@ private:
 
     bool readKey(int key);
     void readKeys();
+    
+    void readAllKeyConfig();
+    void readKeyConfig(Button btn, int *keyCode, int defaultKeyCode);
 
 private:
     GLFWwindow *mWindow;
-    const char *mTitle;
 
     CreateServerView *mCreateServerView;
     JoinServerView *mJoinServerView;
+    KeyMapView *mKeyMapView;
+
+    Config *mConfig;
 
     GameManager *mGameManager;
     GameProxy *mGameProxy;
@@ -66,6 +74,8 @@ private:
     Frame mFrameBuffer;
     std::mutex mFrameBufferMutex;
     unsigned int mFrameTexture;
+
+    int mKeyCode[8];
 };
 
 #endif

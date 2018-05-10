@@ -7,10 +7,21 @@
 
 #include "nes/Controller.h"
 #include "ui/ImGuiExt.h"
+#include "ui/KeyConfig.h"
 
-Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local) { mGameManager = new GameManager; }
+Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local) {
+    mGameManager = new GameManager;
+    mConfig = new Config;
+    if (!mConfig->loadFromDisk("./nes.ini")) {
+        mConfig->save();
+    }
+    readAllKeyConfig();
+}
 
-Window::~Window() { delete mGameManager; }
+Window::~Window() {
+    delete mGameManager;
+    delete mConfig;
+}
 
 bool Window::init(const char *title) {
     if (!glfwInit()) {
@@ -68,9 +79,12 @@ void Window::initGUI() {
 
     mCreateServerView = new CreateServerView();
     mJoinServerView = new JoinServerView();
+    mKeyMapView = new KeyMapView(mConfig);
 
-    mCreateServerView->addClickListener([this](UI_ID id, void *data) { onClick(id, data); });
-    mJoinServerView->addClickListener([this](UI_ID id, void *data) { onClick(id, data); });
+    auto clickListener = [this](UI_ID id, void *data) { onClick(id, data); };
+    mCreateServerView->addClickListener(clickListener);
+    mJoinServerView->addClickListener(clickListener);
+    mKeyMapView->setOnClickListener(clickListener);
 
     glGenTextures(1, &mFrameTexture);
     glBindTexture(GL_TEXTURE_2D, mFrameTexture);
@@ -87,9 +101,11 @@ void Window::destoryGUI() {
 
     mCreateServerView->close();
     mJoinServerView->close();
+    mKeyMapView->close();
 
     delete mCreateServerView;
     delete mJoinServerView;
+    delete mKeyMapView;
 
     ImGui_ImplGlfwGL3_Shutdown();
     ImGui::DestroyContext();
@@ -116,6 +132,8 @@ void Window::onClick(UI_ID id, void *data) {
         } else {
             connectToHost(cdata->ip, port);
         }
+    } else if (id == UI_ID::KeyMapView_Btn_Ok) {
+        readAllKeyConfig();
     }
 }
 
@@ -248,6 +266,8 @@ void Window::renderGUI() {
 
         if (ImGui::BeginMenu("Setting")) {
             if (ImGui::MenuItem("KeyMap")) {
+                mKeyMapView->setKeyCode(mKeyCode);
+                mKeyMapView->show();
             }
             ImGui::EndMenu();
         }
@@ -261,6 +281,9 @@ void Window::renderGUI() {
     }
     if (mJoinServerView->isShow()) {
         mJoinServerView->render();
+    }
+    if (mKeyMapView->isShow()) {
+        mKeyMapView->render();
     }
     ImGui::Render();
 
@@ -322,12 +345,34 @@ bool Window::readKey(int key) {
 }
 
 void Window::readKeys() {
-    processGameKey(Button::A, readKey(GLFW_KEY_Z));
-    processGameKey(Button::B, readKey(GLFW_KEY_X));
-    processGameKey(Button::Select, readKey(GLFW_KEY_S));
-    processGameKey(Button::Start, readKey(GLFW_KEY_ENTER));
-    processGameKey(Button::Up, readKey(GLFW_KEY_UP));
-    processGameKey(Button::Down, readKey(GLFW_KEY_DOWN));
-    processGameKey(Button::Left, readKey(GLFW_KEY_LEFT));
-    processGameKey(Button::Right, readKey(GLFW_KEY_RIGHT));
+    processGameKey(Button::A, readKey(mKeyCode[(int)Button::A]));
+    processGameKey(Button::B, readKey(mKeyCode[(int)Button::B]));
+    processGameKey(Button::Select, readKey(mKeyCode[(int)Button::Select]));
+    processGameKey(Button::Start, readKey(mKeyCode[(int)Button::Start]));
+    processGameKey(Button::Up, readKey(mKeyCode[(int)Button::Up]));
+    processGameKey(Button::Down, readKey(mKeyCode[(int)Button::Down]));
+    processGameKey(Button::Left, readKey(mKeyCode[(int)Button::Left]));
+    processGameKey(Button::Right, readKey(mKeyCode[(int)Button::Right]));
+}
+
+void Window::readAllKeyConfig() {
+    readKeyConfig(Button::A, &mKeyCode[0], GLFW_KEY_Z);
+    readKeyConfig(Button::B, &mKeyCode[1], GLFW_KEY_X);
+    readKeyConfig(Button::Select, &mKeyCode[2], GLFW_KEY_S);
+    readKeyConfig(Button::Start, &mKeyCode[3], GLFW_KEY_ENTER);
+    readKeyConfig(Button::Up, &mKeyCode[4], GLFW_KEY_UP);
+    readKeyConfig(Button::Down, &mKeyCode[5], GLFW_KEY_DOWN);
+    readKeyConfig(Button::Left, &mKeyCode[6], GLFW_KEY_LEFT);
+    readKeyConfig(Button::Right, &mKeyCode[7], GLFW_KEY_RIGHT);
+}
+
+void Window::readKeyConfig(Button btn, int *keyCode, int defaultKeyCode) {
+    bool success;
+    int temp;
+    temp = mConfig->readInt("GameKey", getButtonName(btn), &success);
+    if (success) {
+        *keyCode = temp;
+    } else {
+        *keyCode = defaultKeyCode;
+    }
 }

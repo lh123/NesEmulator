@@ -1,8 +1,7 @@
 #include "ui/Window.h"
 #include <iostream>
 
-#include "net/Server.h"
-#include "net/Client.h"
+#include "ui/Config.h"
 
 int main(int argc, char *argv[]) {
     Window window;

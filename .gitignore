@@ -2,4 +2,4 @@
 build
 rom
 build.bat
-imgui.ini
+*.ini
