@@ -12,6 +12,7 @@ bool GameManager::startGame(std::string path) {
         mConsole = new Console(path.c_str());
         if (!mConsole->isOpenRom()) {
             delete mConsole;
+            mRunning = false;
         } else {
             mRunning = true;
             mPause = false;

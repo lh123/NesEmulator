@@ -1,8 +1,6 @@
 #include "ui/Window.h"
 #include <iostream>
 
-#include "ui/Config.h"
-
 int main(int argc, char *argv[]) {
     Window window;
     if (!window.init("NES")) {
