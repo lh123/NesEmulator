@@ -1,8 +1,8 @@
 #include "nes/Mapper2.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
-Mapper2::Mapper2(Cartridge *cartridge)
-    : Mapper(), cartridge(cartridge) {
+Mapper2::Mapper2(Cartridge *cartridge) : Mapper(), cartridge(cartridge) {
     prgBanks = cartridge->prgLength() / 0x4000;
     prgBank1 = 0;
     prgBank2 = prgBanks - 1;
@@ -41,4 +41,16 @@ void Mapper2::write(uint16_t address, uint8_t value) {
     } else {
         std::printf("error: mapper1 write at address: 0x%04X\n", address);
     }
+}
+
+void Mapper2::save(Serialize &serialize) {
+    serialize << prgBanks;
+    serialize << prgBank1;
+    serialize << prgBank2;
+}
+
+void Mapper2::load(Serialize &serialize) {
+    serialize >> prgBanks;
+    serialize >> prgBank1;
+    serialize >> prgBank2;
 }

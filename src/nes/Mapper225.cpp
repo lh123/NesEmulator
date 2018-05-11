@@ -1,5 +1,6 @@
 #include "nes/Mapper225.h"
 #include "nes/Memory.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 Mapper225::Mapper225(Cartridge *cartridge) : mCartridge(cartridge) {
@@ -57,3 +58,15 @@ void Mapper225::write(uint16_t address, uint8_t value) {
 }
 
 void Mapper225::step() {}
+
+void Mapper225::save(Serialize &serialize) {
+    serialize << mChrBank;
+    serialize << mPrgBank1;
+    serialize << mPrgBank2;
+}
+
+void Mapper225::load(Serialize &serialize) {
+    serialize >> mChrBank;
+    serialize >> mPrgBank1;
+    serialize >> mPrgBank2;
+}

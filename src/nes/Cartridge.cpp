@@ -1,12 +1,12 @@
 #include "nes/Cartridge.h"
-
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 const uint32_t NesMagic = 0x1a53454e;
 
 Cartridge::Cartridge()
-    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0),
-      trainer(false), header{0}, mPRGLength(0), mCHRLength(0) {}
+    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0), trainer(false), header{0}, mPRGLength(0),
+      mCHRLength(0) {}
 
 Cartridge::~Cartridge() {
     delete[] chr;
@@ -77,3 +77,7 @@ bool Cartridge::loadNesFile(const char *path) {
 int Cartridge::prgLength() const { return mPRGLength; }
 
 int Cartridge::chrLength() const { return mCHRLength; }
+
+void Cartridge::save(Serialize &serialize) { serialize.writeArray(sram, SRAM_SIZE); }
+
+void Cartridge::load(Serialize &serialize) { serialize.readArray(sram, SRAM_SIZE); }

@@ -1,4 +1,5 @@
 #include "nes/Mapper3.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 Mapper3::Mapper3(Cartridge *cartridge) : mCartridge(cartridge) {
@@ -43,3 +44,15 @@ void Mapper3::write(uint16_t address, uint8_t value) {
 }
 
 void Mapper3::step() {}
+
+void Mapper3::save(Serialize &serialize) {
+    serialize << mChrBank;
+    serialize << mPrgBank1;
+    serialize << mPrgBank2;
+}
+
+void Mapper3::load(Serialize &serialize) {
+    serialize >> mChrBank;
+    serialize >> mPrgBank1;
+    serialize >> mPrgBank2;
+}

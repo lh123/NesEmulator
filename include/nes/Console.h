@@ -14,6 +14,7 @@ enum class Button;
 class Mapper;
 class Palette;
 class Filter;
+class Serialize;
 
 class Console {
 public:
@@ -34,6 +35,9 @@ public:
     AudioBuffer *getAudioBuffer();
 
     bool isOpenRom() const;
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 public:
     CPU *cpu;
     PPU *ppu;

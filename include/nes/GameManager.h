@@ -42,12 +42,17 @@ public:
 
     void setOnFrameListener(FrameListener listener);
 
+    bool saveState();
+    bool loadState();
+
 private:
     void handleGameThread();
 
     void processKeyAction(KeyAction *action);
 
 private:
+    std::string mGameName;
+    
     FrameListener mFrameListener;
 
     Console *mConsole;

@@ -1,6 +1,9 @@
 #include "nes/GameManager.h"
+#include "nes/Serialize.hpp"
+
 #include <thread>
 #include <chrono>
+#include <fstream>
 
 GameManager::GameManager()
     : mConsole(nullptr), mRunning(false), mPause(false), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {}
@@ -26,6 +29,7 @@ bool GameManager::startGame(std::string path) {
 void GameManager::pause() {
     if (!mPause && mRunning) {
         mPause = true;
+        std::lock_guard<std::mutex> lock(mConsoleMutex);
     }
 }
 
@@ -80,6 +84,49 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
 
 void GameManager::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
 
+bool GameManager::saveState() {
+    if (!mRunning) {
+        return false;
+    }
+    bool ret = false;
+    pause();
+    std::fstream stateFile("state.sav", std::ios::binary | std::ios::out);
+    if (stateFile.is_open()) {
+        Serialize state(&stateFile);
+        state << 0xFFEE;
+        mConsole->save(state);
+        ret = true;
+    } else {
+        ret = false;
+    }
+    resume();
+    return ret;
+}
+
+bool GameManager::loadState() {
+    if (!mRunning) {
+        return false;
+    }
+    bool ret = false;
+    pause();
+    std::fstream stateFile("state.sav", std::ios::binary | std::ios::in);
+    if (stateFile.is_open()) {
+        Serialize state(&stateFile);
+        int magic;
+        state >> magic;
+        if (magic != 0xFFEE) {
+            ret = false;
+        } else {
+            mConsole->load(state);
+            ret = true;
+        }
+    } else {
+        ret = false;
+    }
+    resume();
+    return ret;
+}
+
 void GameManager::handleGameThread() {
     std::lock_guard<std::mutex> lock(mConsoleMutex);
     auto lastTime = std::chrono::system_clock::now();
@@ -115,6 +162,7 @@ void GameManager::handleGameThread() {
             }
             frameLastTime = currentTime;
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 

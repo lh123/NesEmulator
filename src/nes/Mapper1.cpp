@@ -1,10 +1,12 @@
 #include "nes/Mapper1.h"
 #include "nes/Memory.h"
+#include "nes/Serialize.hpp"
+
 #include <cstdio>
 
 Mapper1::Mapper1(Cartridge *cartridge)
-    : Mapper(), cartridge(cartridge), shiftRegister(0x10), control(0), prgMode(0), chrMode(0),
-      prgBank(0), chrBank0(0), chrBank1(0), prgOffsets{0}, chrOffsets{0} {
+    : Mapper(), cartridge(cartridge), shiftRegister(0x10), control(0), prgMode(0), chrMode(0), prgBank(0), chrBank0(0),
+      chrBank1(0), prgOffsets{0}, chrOffsets{0} {
     prgOffsets[1] = prgBankOffset(-1);
 }
 
@@ -158,4 +160,30 @@ void Mapper1::updateOffset() {
         chrOffsets[1] = chrBankOffset(chrBank1);
         break;
     }
+}
+
+void Mapper1::save(Serialize &serialize) {
+    serialize << shiftRegister;
+    serialize << control;
+    serialize << prgMode;
+    serialize << chrMode;
+    serialize << prgBank;
+    serialize << chrBank0;
+    serialize << chrBank1;
+
+    serialize.writeArray(prgOffsets, 2);
+    serialize.writeArray(chrOffsets, 2);
+}
+
+void Mapper1::load(Serialize &serialize) {
+    serialize >> shiftRegister;
+    serialize >> control;
+    serialize >> prgMode;
+    serialize >> chrMode;
+    serialize >> prgBank;
+    serialize >> chrBank0;
+    serialize >> chrBank1;
+
+    serialize.readArray(prgOffsets, 2);
+    serialize.readArray(chrOffsets, 2);
 }

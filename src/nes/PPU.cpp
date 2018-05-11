@@ -2,6 +2,7 @@
 #include "nes/Console.h"
 #include "nes/CPU.h"
 #include "nes/Palette.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 #include <chrono>
@@ -563,4 +564,98 @@ void PPU::step() {
         flagSpriteZeroHit = 0;
         flagSpriteOverflow = 0;
     }
+}
+
+void PPU::save(Serialize &serialize) {
+    serialize << cycle;
+    serialize << scanLine;
+    serialize << frame;
+    serialize.writeArray(paletteData, PALETTE_DATA_SIZE);
+    serialize.writeArray(nameTableData, NAME_TABLE_DATA_SIZE);
+    serialize.writeArray(oamData, OAM_DATA_SIZE);
+    serialize << v;
+    serialize << t;
+    serialize << x;
+    serialize << w;
+    serialize << f;
+    serialize << reg;
+    serialize << nmiOccurred;
+    serialize << nmiOutput;
+    serialize << nmiPrevious;
+    serialize << nmiDelay;
+    serialize << nameTableByte;
+    serialize << attributeTableByte;
+    serialize << lowTileByte;
+    serialize << highTileByte;
+    serialize << tileData;
+    serialize << spriteCount;
+    serialize.writeArray(spritePatterns, 8);
+    serialize.writeArray(spritePositions, 8);
+    serialize.writeArray(spritePriorities, 8);
+    serialize.writeArray(spriteIndexes, 8);
+    serialize << flagNameTable;
+    serialize << flagIncrement;
+    serialize << flagSpriteTable;
+    serialize << flagBackgroundTable;
+    serialize << flagSpriteSize;
+    serialize << flagMasterSlave;
+    serialize << flagGrayScale;
+    serialize << flagShowLeftBackground;
+    serialize << flagShowLeftSprites;
+    serialize << flagShowBackground;
+    serialize << flagShowSprites;
+    serialize << flagRedTint;
+    serialize << flagGreenTint;
+    serialize << flagBlueTint;
+    serialize << flagSpriteZeroHit;
+    serialize << flagSpriteOverflow;
+    serialize << oamAddress;
+    serialize << bufferedData;
+}
+
+void PPU::load(Serialize &serialize) {
+    serialize >> cycle;
+    serialize >> scanLine;
+    serialize >> frame;
+    serialize.readArray(paletteData, PALETTE_DATA_SIZE);
+    serialize.readArray(nameTableData, NAME_TABLE_DATA_SIZE);
+    serialize.readArray(oamData, OAM_DATA_SIZE);
+    serialize >> v;
+    serialize >> t;
+    serialize >> x;
+    serialize >> w;
+    serialize >> f;
+    serialize >> reg;
+    serialize >> nmiOccurred;
+    serialize >> nmiOutput;
+    serialize >> nmiPrevious;
+    serialize >> nmiDelay;
+    serialize >> nameTableByte;
+    serialize >> attributeTableByte;
+    serialize >> lowTileByte;
+    serialize >> highTileByte;
+    serialize >> tileData;
+    serialize >> spriteCount;
+    serialize.readArray(spritePatterns, 8);
+    serialize.readArray(spritePositions, 8);
+    serialize.readArray(spritePriorities, 8);
+    serialize.readArray(spriteIndexes, 8);
+    serialize >> flagNameTable;
+    serialize >> flagIncrement;
+    serialize >> flagSpriteTable;
+    serialize >> flagBackgroundTable;
+    serialize >> flagSpriteSize;
+    serialize >> flagMasterSlave;
+    serialize >> flagGrayScale;
+    serialize >> flagShowLeftBackground;
+    serialize >> flagShowLeftSprites;
+    serialize >> flagShowBackground;
+    serialize >> flagShowSprites;
+    serialize >> flagRedTint;
+    serialize >> flagGreenTint;
+    serialize >> flagBlueTint;
+    serialize >> flagSpriteZeroHit;
+    serialize >> flagSpriteOverflow;
+    serialize >> oamAddress;
+    serialize >> bufferedData;
 }

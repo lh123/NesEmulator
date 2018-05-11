@@ -5,6 +5,7 @@
 #include <cstdint>
 
 class Console;
+class Serialize;
 
 class PPU : public PPUMemory {
 public:
@@ -24,6 +25,9 @@ public:
     void writeRegister(uint16_t address, uint8_t value);
 
     void step();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 private:
     uint8_t readPalette(uint16_t address);

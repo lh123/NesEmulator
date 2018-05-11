@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "nes/Console.h"
+#include "nes/Serialize.hpp"
 
 static InstructionFunc InstructionTable[256] = {
     brk, ora,  kil, slo, nop, ora,  asl, slo, //
@@ -151,8 +152,8 @@ static const char *instructionNames[256] = {
 };
 
 CPU::CPU(Console *console)
-    : CPUMemory(console), stall(0), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0),
-      D(0), B(0), U(0), V(0), N(0), interrupt(InterruptType::None) {
+    : CPUMemory(console), stall(0), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0), D(0), B(0), U(0), V(0),
+      N(0), interrupt(InterruptType::None) {
     reset();
 }
 
@@ -199,8 +200,8 @@ void CPU::printInstruction() {
     if (byte < 3) {
         std::strncpy(w2, "  ", 3);
     }
-    std::sprintf(buffer, "%4X  %s %s %s  %s %28sA:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n", PC,
-                 w0, w1, w2, name, "", A, X, Y, flags(), SP, int(cycles * 3 % 341));
+    std::sprintf(buffer, "%4X  %s %s %s  %s %28sA:%02X X:%02X Y:%02X P:%02X SP:%02X CYC:%3d\n", PC, w0, w1, w2, name,
+                 "", A, X, Y, flags(), SP, int(cycles * 3 % 341));
     std::printf(buffer);
 }
 
@@ -402,4 +403,42 @@ void CPU::irq() {
     PC = read16(IRQ_ADDRESS);
     I = 1;
     cycles += 7;
+}
+
+void CPU::save(Serialize &serialize) {
+    serialize << stall;
+    serialize << cycles;
+    serialize << PC;
+    serialize << SP;
+    serialize << A;
+    serialize << X;
+    serialize << Y;
+    serialize << C;
+    serialize << Z;
+    serialize << I;
+    serialize << D;
+    serialize << B;
+    serialize << U;
+    serialize << V;
+    serialize << N;
+    serialize << interrupt;
+}
+
+void CPU::load(Serialize &serialize) {
+    serialize >> stall;
+    serialize >> cycles;
+    serialize >> PC;
+    serialize >> SP;
+    serialize >> A;
+    serialize >> X;
+    serialize >> Y;
+    serialize >> C;
+    serialize >> Z;
+    serialize >> I;
+    serialize >> D;
+    serialize >> B;
+    serialize >> U;
+    serialize >> V;
+    serialize >> N;
+    serialize >> interrupt;
 }

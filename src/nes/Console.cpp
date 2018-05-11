@@ -9,6 +9,7 @@
 #include "nes/Mapper.h"
 #include "nes/Palette.h"
 #include "nes/Filter.h"
+#include "nes/Serialize.hpp"
 
 Console::Console(const char *path) : ram{0} {
     cartridge = new Cartridge();
@@ -82,3 +83,21 @@ void Console::setAudioSampleRate(uint32_t value) { apu->setSampleRate(value); }
 AudioBuffer *Console::getAudioBuffer() { return apu->getAudioBuffer(); }
 
 bool Console::isOpenRom() const { return isSuccess; }
+
+void Console::save(Serialize &serialize) {
+    serialize.writeArray(ram, RAM_SIZE);
+    cpu->save(serialize);
+    ppu->save(serialize);
+    apu->save(serialize);
+    cartridge->save(serialize);
+    mapper->save(serialize);
+}
+
+void Console::load(Serialize &serialize) {
+    serialize.readArray(ram, RAM_SIZE);
+    cpu->load(serialize);
+    ppu->load(serialize);
+    apu->load(serialize);
+    cartridge->load(serialize);
+    mapper->load(serialize);
+}

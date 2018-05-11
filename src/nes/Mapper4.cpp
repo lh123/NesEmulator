@@ -2,6 +2,7 @@
 #include "nes/Console.h"
 #include "nes/PPU.h"
 #include "nes/CPU.h"
+#include "nes/Serialize.hpp"
 
 Mapper4::Mapper4(Console *console, Cartridge *cartridge)
     : console(console), cartridge(cartridge), _register(0), _registers{0}, prgMode(0),
@@ -12,7 +13,7 @@ Mapper4::Mapper4(Console *console, Cartridge *cartridge)
     prgOffsets[3] = prgBankOffset(-1);
 }
 
-Mapper4::~Mapper4(){}
+Mapper4::~Mapper4() {}
 
 uint8_t Mapper4::read(uint16_t address) {
     if (address < 0x2000) {
@@ -182,4 +183,28 @@ void Mapper4::updateOffset() {
         chrOffsets[7] = chrBankOffset(_registers[1] | 0x01);
         break;
     }
+}
+
+void Mapper4::save(Serialize &serialize) {
+    serialize << _register;
+    serialize.writeArray(_registers, 8);
+    serialize << prgMode;
+    serialize << chrMode;
+    serialize.writeArray(prgOffsets, 4);
+    serialize.writeArray(chrOffsets, 8);
+    serialize << reload;
+    serialize << counter;
+    serialize << irqEnable;
+}
+
+void Mapper4::load(Serialize &serialize) {
+    serialize >> _register;
+    serialize.readArray(_registers, 8);
+    serialize >> prgMode;
+    serialize >> chrMode;
+    serialize.readArray(prgOffsets, 4);
+    serialize.readArray(chrOffsets, 8);
+    serialize >> reload;
+    serialize >> counter;
+    serialize >> irqEnable;
 }

@@ -14,6 +14,10 @@ public:
     void write(uint16_t address, uint8_t value) override;
     void step() override;
 
+    virtual void save(Serialize &serialize) override;
+    virtual void load(Serialize &serialize) override;
+
+private:
     void handleScanLine();
     void writeRegister(uint16_t address, uint8_t value);
     void writeBankSelect(uint8_t value);

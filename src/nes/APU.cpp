@@ -2,6 +2,7 @@
 #include "nes/Console.h"
 #include "nes/CPU.h"
 #include "nes/Filter.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 static const uint8_t lengthTable[32] = {
@@ -43,8 +44,7 @@ static void initTable() {
 
 APU::APU(Console *console)
     : console(console), sampleRate(0), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0),
-      frameIRQ(false), filterChain{new Filter(Filter::Type::HighPass),
-                                   new Filter(Filter::Type::HighPass),
+      frameIRQ(false), filterChain{new Filter(Filter::Type::HighPass), new Filter(Filter::Type::HighPass),
                                    new Filter(Filter::Type::LowPass)} {
     initTable();
     pulse1 = new Pulse(1);
@@ -355,12 +355,37 @@ void APU::writeFrameCounter(uint8_t value) {
     }
 }
 
+void APU::save(Serialize &serialize) {
+    // serialize << sampleRate;
+    // serialize << sampleCounter
+    serialize << cycle;
+    serialize << framePeriod;
+    serialize << frameCounter;
+    serialize << frameIRQ;
+    pulse1->save(serialize);
+    pulse2->save(serialize);
+    triangle->save(serialize);
+    noise->save(serialize);
+    dmc->save(serialize);
+}
+
+void APU::load(Serialize &serialize) {
+    serialize >> cycle;
+    serialize >> framePeriod;
+    serialize >> frameCounter;
+    serialize >> frameIRQ;
+    pulse1->load(serialize);
+    pulse2->load(serialize);
+    triangle->load(serialize);
+    noise->load(serialize);
+    dmc->load(serialize);
+}
+
 Pulse::Pulse(uint8_t channel)
-    : enabled(false), channel(channel), dutyCycle(0), sequenceStep(0), lengthCounterHalt(false),
-      lengthCounter(0), envelopeEnabled(false), envelopeLoop(false), envelopeStart(false),
-      envelopeDividerPeriod(0), envelopeDividerCounter(0), envelopeDecayCounter(0),
-      constantVolume(0), timerPeriod(0), timerCounter(0), targetPeriod(0),
-      sweepEnabled(false), sweepReload(0), sweepNegate(0), sweepShift(0), sweepDividerPeriod(0),
+    : enabled(false), channel(channel), dutyCycle(0), sequenceStep(0), lengthCounterHalt(false), lengthCounter(0),
+      envelopeEnabled(false), envelopeLoop(false), envelopeStart(false), envelopeDividerPeriod(0),
+      envelopeDividerCounter(0), envelopeDecayCounter(0), constantVolume(0), timerPeriod(0), timerCounter(0),
+      targetPeriod(0), sweepEnabled(false), sweepReload(0), sweepNegate(0), sweepShift(0), sweepDividerPeriod(0),
       sweepDividerCounter(0) {}
 
 Pulse::~Pulse() {}
@@ -467,7 +492,7 @@ void Pulse::stepEnvelope() {
 
 // frame counter sends a half-frame clock
 void Pulse::stepSweep() {
-    calculationTargetPeriod();    
+    calculationTargetPeriod();
     if (sweepDividerCounter > 0) {
         sweepDividerCounter--;
     } else {
@@ -523,10 +548,59 @@ uint8_t Pulse::output() {
     }
 }
 
+void Pulse::save(Serialize &serialize) {
+    serialize << enabled;
+    serialize << channel;
+    serialize << dutyCycle;
+    serialize << sequenceStep;
+    serialize << lengthCounterHalt;
+    serialize << lengthCounter;
+    serialize << envelopeEnabled;
+    serialize << envelopeLoop;
+    serialize << envelopeStart;
+    serialize << envelopeDividerPeriod;
+    serialize << envelopeDividerCounter;
+    serialize << envelopeDecayCounter;
+    serialize << constantVolume;
+    serialize << timerPeriod;
+    serialize << timerCounter;
+    serialize << targetPeriod;
+    serialize << sweepEnabled;
+    serialize << sweepReload;
+    serialize << sweepNegate;
+    serialize << sweepShift;
+    serialize << sweepDividerPeriod;
+    serialize << sweepDividerCounter;
+}
+
+void Pulse::load(Serialize &serialize) {
+    serialize >> enabled;
+    serialize >> channel;
+    serialize >> dutyCycle;
+    serialize >> sequenceStep;
+    serialize >> lengthCounterHalt;
+    serialize >> lengthCounter;
+    serialize >> envelopeEnabled;
+    serialize >> envelopeLoop;
+    serialize >> envelopeStart;
+    serialize >> envelopeDividerPeriod;
+    serialize >> envelopeDividerCounter;
+    serialize >> envelopeDecayCounter;
+    serialize >> constantVolume;
+    serialize >> timerPeriod;
+    serialize >> timerCounter;
+    serialize >> targetPeriod;
+    serialize >> sweepEnabled;
+    serialize >> sweepReload;
+    serialize >> sweepNegate;
+    serialize >> sweepShift;
+    serialize >> sweepDividerPeriod;
+    serialize >> sweepDividerCounter;
+}
+
 Triangle::Triangle()
-    : enabled(false), lengthCounterHalt(false), control(false), lengthCounter(0), timerPeriod(0),
-      timerCounter(0), linearCounterPeriod(0), linearCounter(0), linearCounterReload(false),
-      sequencesStep(0) {}
+    : enabled(false), lengthCounterHalt(false), control(false), lengthCounter(0), timerPeriod(0), timerCounter(0),
+      linearCounterPeriod(0), linearCounter(0), linearCounterReload(false), sequencesStep(0) {}
 
 Triangle::~Triangle() {}
 
@@ -612,11 +686,36 @@ uint8_t Triangle::output() {
     return triangleTable[sequencesStep];
 }
 
+void Triangle::save(Serialize &serialize) {
+    serialize << enabled;
+    serialize << lengthCounterHalt;
+    serialize << control;
+    serialize << lengthCounter;
+    serialize << timerPeriod;
+    serialize << timerCounter;
+    serialize << linearCounterPeriod;
+    serialize << linearCounter;
+    serialize << linearCounterReload;
+    serialize << sequencesStep;
+}
+
+void Triangle::load(Serialize &serialize) {
+    serialize >> enabled;
+    serialize >> lengthCounterHalt;
+    serialize >> control;
+    serialize >> lengthCounter;
+    serialize >> timerPeriod;
+    serialize >> timerCounter;
+    serialize >> linearCounterPeriod;
+    serialize >> linearCounter;
+    serialize >> linearCounterReload;
+    serialize >> sequencesStep;
+}
+
 Noise::Noise()
-    : enabled(false), mode(false), shiftRegister(0), lenghtCounterHalt(false), lengthCounter(0),
-      timerPeriod(0), timerCounter(0), envelopeEnabled(false), envelopeLoop(false),
-      envelopeStart(false), envelopeDividerPeriod(0), envelopeDividerCounter(0),
-      envelopeDecayCounter(0), constantVolume(0), envelopeOutputVolume(0) {}
+    : enabled(false), mode(false), shiftRegister(0), lenghtCounterHalt(false), lengthCounter(0), timerPeriod(0),
+      timerCounter(0), envelopeEnabled(false), envelopeLoop(false), envelopeStart(false), envelopeDividerPeriod(0),
+      envelopeDividerCounter(0), envelopeDecayCounter(0), constantVolume(0), envelopeOutputVolume(0) {}
 
 Noise::~Noise() {}
 
@@ -732,11 +831,46 @@ uint8_t Noise::output() {
     }
 }
 
+void Noise::save(Serialize &serialize) {
+    serialize << enabled;
+    serialize << mode;
+    serialize << shiftRegister;
+    serialize << lenghtCounterHalt;
+    serialize << lengthCounter;
+    serialize << timerPeriod;
+    serialize << timerCounter;
+    serialize << envelopeEnabled;
+    serialize << envelopeLoop;
+    serialize << envelopeStart;
+    serialize << envelopeDividerPeriod;
+    serialize << envelopeDividerCounter;
+    serialize << envelopeDecayCounter;
+    serialize << constantVolume;
+    serialize << envelopeOutputVolume;
+}
+
+void Noise::load(Serialize &serialize) {
+    serialize >> enabled;
+    serialize >> mode;
+    serialize >> shiftRegister;
+    serialize >> lenghtCounterHalt;
+    serialize >> lengthCounter;
+    serialize >> timerPeriod;
+    serialize >> timerCounter;
+    serialize >> envelopeEnabled;
+    serialize >> envelopeLoop;
+    serialize >> envelopeStart;
+    serialize >> envelopeDividerPeriod;
+    serialize >> envelopeDividerCounter;
+    serialize >> envelopeDecayCounter;
+    serialize >> constantVolume;
+    serialize >> envelopeOutputVolume;
+}
+
 DMC::DMC(CPU *cpu)
-    : enabled(false), loop(false), irqEnable(false), interrupt(false), rateIndex(0), frequency(0),
-      sampleAddress(0), sampleLength(0), sampleBuffer(0), sampleBufferBitCount(0),
-      addressCounter(0), bytesRemainingCounter(0), timerPeriod(0), timerCounter(0),
-      shiftRegister(0), bitsRemainingCounter(0), outputLevel(0), silence(false),
+    : enabled(false), loop(false), irqEnable(false), interrupt(false), rateIndex(0), frequency(0), sampleAddress(0),
+      sampleLength(0), sampleBuffer(0), sampleBufferBitCount(0), addressCounter(0), bytesRemainingCounter(0),
+      timerPeriod(0), timerCounter(0), shiftRegister(0), bitsRemainingCounter(0), outputLevel(0), silence(false),
       outputCycleEnd(false), cpu(cpu) {}
 
 DMC::~DMC() {}
@@ -832,4 +966,48 @@ void DMC::stepReader() {
     if (interrupt) {
         cpu->triggerIRQ();
     }
+}
+
+void DMC::save(Serialize &serialize) {
+    serialize << enabled;
+    serialize << loop;
+    serialize << irqEnable;
+    serialize << interrupt;
+    serialize << rateIndex;
+    serialize << frequency;
+    serialize << sampleAddress;
+    serialize << sampleLength;
+    serialize << sampleBuffer;
+    serialize << sampleBufferBitCount;
+    serialize << addressCounter;
+    serialize << bytesRemainingCounter;
+    serialize << timerPeriod;
+    serialize << timerCounter;
+    serialize << shiftRegister;
+    serialize << bitsRemainingCounter;
+    serialize << outputLevel;
+    serialize << silence;
+    serialize << outputCycleEnd;
+}
+
+void DMC::load(Serialize &serialize) {
+    serialize >> enabled;
+    serialize >> loop;
+    serialize >> irqEnable;
+    serialize >> interrupt;
+    serialize >> rateIndex;
+    serialize >> frequency;
+    serialize >> sampleAddress;
+    serialize >> sampleLength;
+    serialize >> sampleBuffer;
+    serialize >> sampleBufferBitCount;
+    serialize >> addressCounter;
+    serialize >> bytesRemainingCounter;
+    serialize >> timerPeriod;
+    serialize >> timerCounter;
+    serialize >> shiftRegister;
+    serialize >> bitsRemainingCounter;
+    serialize >> outputLevel;
+    serialize >> silence;
+    serialize >> outputCycleEnd;
 }

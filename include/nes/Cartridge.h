@@ -2,6 +2,7 @@
 #define CARTRIDGE_H
 
 #include <cstdint>
+class Serialize;
 
 struct INesHeader {
 
@@ -34,6 +35,9 @@ public:
     bool loadNesFile(const char *path);
     int prgLength() const;
     int chrLength() const;
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 private:
     INesHeader header;

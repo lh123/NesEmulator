@@ -1,5 +1,6 @@
 #include "nes/Mapper7.h"
 #include "nes/Memory.h"
+#include "nes/Serialize.hpp"
 #include <cstdio>
 
 Mapper7::Mapper7(Cartridge *cartridge) : mCartridge(cartridge), mPrgBank(0) {}
@@ -40,3 +41,7 @@ void Mapper7::write(uint16_t address, uint8_t value) {
 }
 
 void Mapper7::step() {}
+
+void Mapper7::save(Serialize &serialize) { serialize << mPrgBank; }
+
+void Mapper7::load(Serialize &serialize) { serialize >> mPrgBank; }

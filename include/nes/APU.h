@@ -7,6 +7,7 @@
 
 class Console;
 class CPU;
+class Serialize;
 
 class Pulse;
 class Triangle;
@@ -27,6 +28,9 @@ public:
 
     AudioBuffer *getAudioBuffer() const;
     float output();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 private:
     void sendSample();
@@ -82,9 +86,12 @@ public:
     void stepSweep();
     void stepLength();
 
-    void calculationTargetPeriod();    
+    void calculationTargetPeriod();
 
     uint8_t output();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 public:
     bool enabled;
@@ -131,6 +138,9 @@ public:
 
     uint8_t output();
 
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
+
 public:
     bool enabled;
     bool lengthCounterHalt;
@@ -162,6 +172,9 @@ public:
     void stepLength();
 
     uint8_t output();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 public:
     bool enabled;
@@ -200,6 +213,9 @@ public:
     void stepTimer();
     void stepReader();
     void stepShifter();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 public:
     bool enabled;

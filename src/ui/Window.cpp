@@ -269,6 +269,12 @@ void Window::renderGUI() {
                 mKeyMapView->setKeyCode(mKeyCode);
                 mKeyMapView->show();
             }
+            if (ImGui::MenuItem("Save")) {
+                mGameManager->saveState();
+            }
+            if (ImGui::MenuItem("Load")) {
+                mGameManager->loadState();
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();

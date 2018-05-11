@@ -5,6 +5,7 @@
 #include <cstdint>
 
 class Console;
+class Serialize;
 
 class CPU : public CPUMemory {
 
@@ -73,6 +74,9 @@ public:
 
     void nmi();
     void irq();
+
+    void save(Serialize &serialize);
+    void load(Serialize &serialize);
 
 public:
     friend void adc(CPU *cpu, CPU::StepInfo *info);
