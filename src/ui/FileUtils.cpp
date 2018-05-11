@@ -3,6 +3,9 @@
 
 namespace ImGui {
 bool showFileDialog(char *fileName, int size) {
+    char currentPath[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, currentPath);
+
     OPENFILENAME ofn = {0};
 
     ofn.lStructSize = sizeof(OPENFILENAME);
@@ -13,12 +16,9 @@ bool showFileDialog(char *fileName, int size) {
     ofn.nMaxFile = size;
     ofn.lpstrInitialDir = nullptr;
     ofn.lpstrTitle = TEXT("Please choose nes file");
-    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
-
-    if (GetOpenFileName(&ofn)) {
-        return true;
-    } else {
-        return false;
-    }
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    bool ret = GetOpenFileName(&ofn);
+    SetCurrentDirectory(currentPath);
+    return ret;
 }
 }; // namespace ImGui
