@@ -12,7 +12,7 @@ enum class GameProxyMode { Host, Client };
 
 class GameProxy {
 public:
-    using FrameListener = std::function<void(Frame frame)>;
+    using FrameListener = std::function<void(const Frame *)>;
     using KeyListener = std::function<void(Button button, bool pressed)>;
 
     static constexpr int DEFAULT_FRAME_SKIP = 2;
@@ -57,6 +57,7 @@ private:
     KeyListener mKeyListener;
 
     bool mKeyBuffer[8];
+    Frame mFrameBuffer;
 
     int mFrameSkip;
 };

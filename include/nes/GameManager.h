@@ -8,16 +8,9 @@
 #include <queue>
 #include <iostream>
 
-struct Action {
-    enum Type { StartGame, PauseGame, ResumeGame, Key };
-    Action(Type type) : type(type) {}
-    virtual ~Action() {}
-    Type type;
-};
+#include "nes/Pool.hpp"
 
-struct KeyAction : public Action {
-    KeyAction() : Action(Key) {}
-    virtual ~KeyAction() {}
+struct KeyAction {
     int player;
     Button button;
     bool pressed;
@@ -25,7 +18,7 @@ struct KeyAction : public Action {
 
 class GameManager {
 public:
-    using FrameListener = std::function<void(Frame)>;
+    using FrameListener = std::function<void(const Frame *)>;
 
     GameManager();
     ~GameManager();
@@ -52,7 +45,7 @@ private:
 
 private:
     std::string mGameName;
-    
+
     FrameListener mFrameListener;
 
     Console *mConsole;
@@ -61,7 +54,9 @@ private:
 
     std::mutex mConsoleMutex;
     std::mutex mActionQueueMutex;
-    std::queue<Action *> mActionQueue;
+    std::queue<KeyAction *> mActionQueue;
+
+    Pool<KeyAction> mKeyActionPool;
 
     bool mPlayOneKeyBuffer[8];
     bool mPlayTwoKeyBuffer[8];

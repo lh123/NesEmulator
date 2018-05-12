@@ -14,12 +14,13 @@ public:
     Frame(const uint8_t *data);
     Frame(const Frame &other);
     Frame(Frame &&other);
-    
+
     ~Frame();
 
     Frame &operator=(const Frame &other);
     Frame &operator=(Frame &&other);
 
+    void setData(const uint8_t *data);
     void setRGBA(int x, int y, RGBA rgba);
     uint8_t *pixel() const;
 

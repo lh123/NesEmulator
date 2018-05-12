@@ -91,7 +91,7 @@ void Window::initGUI() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    mGameManager->setOnFrameListener([this](Frame frame) { processGameFrame(std::move(frame)); });
+    mGameManager->setOnFrameListener([this](const Frame *frame) { processGameFrame(frame); });
 }
 
 void Window::destoryGUI() {
@@ -201,7 +201,7 @@ void Window::connectToHost(std::string ip, unsigned short port) {
 
     mGameProxy = new GameProxy(GameProxyMode::Client);
     mGameProxy->connectTo(ip, port);
-    mGameProxy->setOnFrameListener([this](Frame frame) { processGameFrame(std::move(frame)); });
+    mGameProxy->setOnFrameListener([this](const Frame *frame) { processGameFrame(frame); });
 }
 
 void Window::disconnect() {
@@ -296,10 +296,10 @@ void Window::renderGUI() {
     ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void Window::processGameFrame(Frame frame) {
+void Window::processGameFrame(const Frame *frame) {
     std::unique_lock<std::mutex> tryLock(mFrameBufferMutex, std::defer_lock);
     if (tryLock.try_lock()) {
-        mFrameBuffer = std::move(frame);
+        mFrameBuffer = *frame;
     }
 }
 

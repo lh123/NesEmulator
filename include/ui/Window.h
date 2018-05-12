@@ -37,7 +37,7 @@ private:
     void renderGUI();
     void destoryGUI();
 
-    void processGameFrame(Frame frame);
+    void processGameFrame(const Frame *frame);
     void processGameKey(Button button, bool pressed);
     void renderGameFrame();
 

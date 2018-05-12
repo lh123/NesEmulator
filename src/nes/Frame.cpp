@@ -40,6 +40,8 @@ Frame &Frame::operator=(Frame &&other) {
     return *this;
 }
 
+void Frame::setData(const uint8_t *data) { ::memcpy(mData, data, SIZE); }
+
 void Frame::setRGBA(int x, int y, RGBA rgba) {
     uint8_t r = (rgba >> 24) & 0xFF;
     uint8_t g = (rgba >> 16) & 0xFF;

@@ -125,10 +125,12 @@ void GameProxy::handleGameFrame(const char *data, int size) {
         std::cout << "Invalid GameFramePacket Size" << std::endl;
         return;
     }
-    GameFramePacket packet = *reinterpret_cast<const GameFramePacket *>(data);
-    Frame frame(packet.imageData);
+    const GameFramePacket *packet = reinterpret_cast<const GameFramePacket *>(data);
+    if (size == Frame::SIZE) {
+        mFrameBuffer.setData(packet->imageData);
+    }
     if (mFrameListener != nullptr) {
-        mFrameListener(std::move(frame));
+        mFrameListener(&mFrameBuffer);
     }
 }
 

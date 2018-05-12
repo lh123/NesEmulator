@@ -174,19 +174,22 @@ void Server::handleAcceptThread() {
 }
 
 void Server::handleClientThread(Client *client) {
+    PacketHead packetHeadBuffer;
+    char *buffer = new char[BUFFER_SIZE];
     while (client->running && mRunning) {
-        PacketHead head;
-        if (recvDataInternal(client->socket, reinterpret_cast<char *>(&head), sizeof(head))) {
-            if (head.magic == PacketHead::MAGIC) {
-                sendDataToOther(client->id, reinterpret_cast<char *>(&head), sizeof(head));
-                char *buffer = new char[head.size];
-                if (recvDataInternal(client->socket, buffer, head.size)) {
-                    sendDataToOther(client->id, buffer, head.size);
+        if (recvDataInternal(client->socket, reinterpret_cast<char *>(&packetHeadBuffer), sizeof(PacketHead))) {
+            if (packetHeadBuffer.magic == PacketHead::MAGIC) {
+                sendDataToOther(client->id, reinterpret_cast<char *>(&packetHeadBuffer), sizeof(PacketHead));
+                if (packetHeadBuffer.size > BUFFER_SIZE) {
+                    delete[] buffer;
+                    buffer = new char[packetHeadBuffer.size];
+                }
+                if (recvDataInternal(client->socket, buffer, packetHeadBuffer.size)) {
+                    sendDataToOther(client->id, buffer, packetHeadBuffer.size);
                 } else {
                     client->running = false;
                     std::cout << "Socket Error\n";
                 }
-                delete[] buffer;
             } else {
                 std::cout << "Invalid Head\n";
             }
@@ -194,6 +197,7 @@ void Server::handleClientThread(Client *client) {
             client->running = false;
         }
     }
+    delete[] buffer;
 
     mClientListMutex.lock();
     for (auto iter = mClientList.begin(); iter != mClientList.end(); iter++) {

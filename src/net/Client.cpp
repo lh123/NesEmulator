@@ -110,29 +110,31 @@ bool Client::isConnect() const { return mIsConnect; }
 
 void Client::run() {
     PacketHead head;
+    char *buffer = new char[BUFFER_SIZE];
     while (!mShouldDisconnect) {
         if (recvDataInternal(reinterpret_cast<char *>(&head), sizeof(PacketHead))) {
             if (head.magic == PacketHead::MAGIC) {
                 if (head.type == PacketType::ClientConnect) {
-                    ClientInfoPacket packet;
-                    if (recvDataInternal(reinterpret_cast<char *>(&packet), head.size)) {
+                    if (recvDataInternal(buffer, head.size)) {
                         if (mClienConnectListener != nullptr) {
-                            mClienConnectListener(&packet);
+                            mClienConnectListener(reinterpret_cast<ClientInfoPacket *>(buffer));
                         }
                     } else {
                         disconnect();
                     }
                 } else if (head.type == PacketType::ClientDisconnect) {
-                    ClientInfoPacket packet;
-                    if (recvDataInternal(reinterpret_cast<char *>(&packet), head.size)) {
+                    if (recvDataInternal(buffer, head.size)) {
                         if (mClienDisconnectListener != nullptr) {
-                            mClienDisconnectListener(&packet);
+                            mClienDisconnectListener(reinterpret_cast<ClientInfoPacket *>(buffer));
                         }
                     } else {
                         disconnect();
                     }
                 } else if (head.type == PacketType::Data) {
-                    char *buffer = new char[head.size];
+                    if (head.size > BUFFER_SIZE) {
+                        delete[] buffer;
+                        buffer = new char[head.size];
+                    }
                     if (recvDataInternal(buffer, head.size)) {
                         if (mDataRecvListener != nullptr) {
                             mDataRecvListener(buffer, head.size);
@@ -140,7 +142,6 @@ void Client::run() {
                     } else {
                         disconnect();
                     }
-                    delete[] buffer;
                 } else {
                     std::cout << "Invalid Packet Type\n";
                 }
@@ -151,4 +152,5 @@ void Client::run() {
             disconnect();
         }
     }
+    delete[] buffer;
 }

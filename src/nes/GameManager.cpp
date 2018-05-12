@@ -6,7 +6,8 @@
 #include <fstream>
 
 GameManager::GameManager()
-    : mConsole(nullptr), mRunning(false), mPause(false), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {}
+    : mConsole(nullptr), mRunning(false), mPause(false),
+      mKeyActionPool(50), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {}
 
 GameManager::~GameManager() { stop(); }
 
@@ -72,13 +73,15 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
         }
     }
     if (mRunning && !mPause) {
-        KeyAction *action = new KeyAction;
-        action->player = player;
-        action->button = button;
-        action->pressed = pressed;
+        KeyAction *action = mKeyActionPool.get();
+        if (action != nullptr) {
+            action->player = player;
+            action->button = button;
+            action->pressed = pressed;
 
-        std::lock_guard<std::mutex> lock(mActionQueueMutex);
-        mActionQueue.push(action);
+            std::lock_guard<std::mutex> lock(mActionQueueMutex);
+            mActionQueue.push(action);
+        }
     }
 }
 
@@ -140,7 +143,7 @@ void GameManager::handleGameThread() {
 
         mConsole->stepSeconds(deltaTime / 1000.0f);
 
-        Action *action = nullptr;
+        KeyAction *action = nullptr;
         mActionQueueMutex.lock();
         if (!mActionQueue.empty()) {
             action = mActionQueue.front();
@@ -148,17 +151,13 @@ void GameManager::handleGameThread() {
         }
         mActionQueueMutex.unlock();
         if (action != nullptr) {
-            if (action->type == Action::Key) {
-                processKeyAction(reinterpret_cast<KeyAction *>(action));
-            }
-        }
-        if (action != nullptr) {
-            delete action;
+            processKeyAction(action);
+            mKeyActionPool.free(action);
         }
 
         if (frameDeltaTime >= 1000 / 60) {
             if (mFrameListener != nullptr) {
-                mFrameListener(*mConsole->buffer());
+                mFrameListener(mConsole->buffer());
             }
             frameLastTime = currentTime;
         }
