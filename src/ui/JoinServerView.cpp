@@ -36,7 +36,7 @@ void JoinServerView::onRender() {
     if (ImGui::Button("Connect")) {
         Data data;
         data.ip = mIpInputBuffer;
-        data.port = mPortInputBuffer;
+        data.port = std::stoi(mPortInputBuffer);
         for (const Clicklistenter &l : mListeners) {
             l(UI_ID::JoinServerView_Btn_Connect, &data);
         }

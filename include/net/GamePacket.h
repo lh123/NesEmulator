@@ -3,6 +3,7 @@
 
 #include "nes/Frame.h"
 #include "nes/Controller.h"
+#include "net/FrameCompress.h"
 
 enum class GamePacketType { Frame, Key, Audio };
 
@@ -11,9 +12,9 @@ struct GamePacketHead {
     int size;
 };
 
-struct GameFramePacket {
-    uint8_t imageData[Frame::SIZE];
-};
+// struct GameFramePacket {
+//     uint8_t imageData[Frame::SIZE];
+// };
 
 struct GameKeyPacket {
     Button button;

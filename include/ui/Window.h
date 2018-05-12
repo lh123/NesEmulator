@@ -46,7 +46,7 @@ private:
     void startGame(std::string path);
     void stopGame();
 
-    void startGameHost(unsigned short port);
+    void startGameHost(unsigned short port, int quality, int frameSkip);
     void stopGameHost();
 
     void connectToHost(std::string ip, unsigned short port);
@@ -54,7 +54,7 @@ private:
 
     bool readKey(int key);
     void readKeys();
-    
+
     void readAllKeyConfig();
     void readKeyConfig(Button btn, int *keyCode, int defaultKeyCode);
 

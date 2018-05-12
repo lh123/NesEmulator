@@ -1,7 +1,6 @@
 #include "ui/Window.h"
 
 #include <iostream>
-#include <sstream>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw_gl3.h>
 
@@ -112,26 +111,12 @@ void Window::destoryGUI() {
 }
 
 void Window::onClick(UI_ID id, void *data) {
-    std::stringstream conv;
     if (id == UI_ID::CreateServerView_Btn_Create) {
-        conv << reinterpret_cast<char *>(data);
-        unsigned short port;
-        conv >> port;
-        if (conv.bad()) {
-            std::cout << "Invaild Port:" << reinterpret_cast<char *>(data) << std::endl;
-        } else {
-            startGameHost(port);
-        }
+        CreateServerView::Data *hostData = reinterpret_cast<CreateServerView::Data *>(data);
+        startGameHost(hostData->port, hostData->quality, hostData->skipFrame);
     } else if (id == UI_ID::JoinServerView_Btn_Connect) {
-        JoinServerView::Data *cdata = reinterpret_cast<JoinServerView::Data *>(data);
-        conv << cdata->port;
-        unsigned short port;
-        conv >> port;
-        if (conv.bad()) {
-            std::cout << "Invaild Port:" << cdata->port << std::endl;
-        } else {
-            connectToHost(cdata->ip, port);
-        }
+        JoinServerView::Data *clientData = reinterpret_cast<JoinServerView::Data *>(data);
+        connectToHost(clientData->ip, clientData->port);
     } else if (id == UI_ID::KeyMapView_Btn_Ok) {
         readAllKeyConfig();
     }
@@ -153,7 +138,7 @@ void Window::stopGame() {
     }
 }
 
-void Window::startGameHost(unsigned short port) {
+void Window::startGameHost(unsigned short port, int quality, int frameSkip) {
     if (mGameType == GameType::Host) {
         return;
     }
@@ -165,6 +150,8 @@ void Window::startGameHost(unsigned short port) {
 
     mGameProxy = new GameProxy(GameProxyMode::Host);
     mGameProxy->startServer(port);
+    mGameProxy->setQuality(quality);
+    mGameProxy->setFrameSkip(frameSkip);
 
     mGameProxy->setOnKeyListener([this](Button button, bool presses) {
         if (mGameManager->isStop() || mGameManager->isPause()) {

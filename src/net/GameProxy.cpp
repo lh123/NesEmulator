@@ -1,10 +1,10 @@
 #include "net/GameProxy.h"
-
 #include <iostream>
 #include <string.h>
 
 GameProxy::GameProxy(GameProxyMode mode)
-    : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mFrameSkip(DEFAULT_FRAME_SKIP) {
+    : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mFrameSkipPeriod(0), mFrameSkipCouner(0),
+      mQuality(80) {
     mServer = new Server;
     mClient = new Client;
     mClient->setDataRecvListener([this](const char *data, int size) { this->handleDataRecv(data, size); });
@@ -74,25 +74,28 @@ void GameProxy::sendKeyInfoToServer(Button button, bool pressed) {
 }
 
 void GameProxy::sendFrameInfoToServer(const Frame *frame) {
-    if (mFrameSkip > 0) {
-        mFrameSkip--;
+    if (mFrameSkipCouner >= mFrameSkipPeriod) {
+        mFrameSkipCouner = 0;
     } else {
-        mFrameSkip = DEFAULT_FRAME_SKIP;
+        mFrameSkipCouner++;
+        auto data = mFrameCompress.compress(frame, mQuality);
+
         GamePacketHead head;
         head.type = GamePacketType::Frame;
-        head.size = sizeof(GameFramePacket);
-
-        GameFramePacket body;
-        ::memcpy(body.imageData, frame->pixel(), sizeof(body.imageData));
+        head.size = data.second;
 
         mClient->sendData(reinterpret_cast<char *>(&head), sizeof(GamePacketHead));
-        mClient->sendData(reinterpret_cast<char *>(&body), sizeof(GameFramePacket));
+        mClient->sendData(data.first, data.second);
     }
 }
 
 void GameProxy::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
 
 void GameProxy::setOnKeyListener(KeyListener listener) { mKeyListener = listener; }
+
+void GameProxy::setFrameSkip(int frameSkip) { mFrameSkipPeriod = frameSkip; }
+
+void GameProxy::setQuality(int quality) { mQuality = quality; }
 
 GameProxyMode GameProxy::currentMode() const { return mMode; }
 
@@ -121,14 +124,11 @@ void GameProxy::handleDataRecv(const char *data, int size) {
 }
 
 void GameProxy::handleGameFrame(const char *data, int size) {
-    if (size != sizeof(GameFramePacket)) {
-        std::cout << "Invalid GameFramePacket Size" << std::endl;
+    const Frame *frame = mFrameCompress.decompress(data, size);
+    if (frame == nullptr) {
         return;
     }
-    const GameFramePacket *packet = reinterpret_cast<const GameFramePacket *>(data);
-    if (size == Frame::SIZE) {
-        mFrameBuffer.setData(packet->imageData);
-    }
+    mFrameBuffer = *frame;
     if (mFrameListener != nullptr) {
         mFrameListener(&mFrameBuffer);
     }

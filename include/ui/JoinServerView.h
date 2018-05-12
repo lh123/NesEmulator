@@ -9,8 +9,8 @@
 class JoinServerView : public UIComponent {
 public:
     struct Data {
-        char *ip;
-        char *port;
+        std::string ip;
+        unsigned short port;
     };
 
     using Clicklistenter = std::function<void(UI_ID, void *)>;

@@ -15,8 +15,6 @@ public:
     using FrameListener = std::function<void(const Frame *)>;
     using KeyListener = std::function<void(Button button, bool pressed)>;
 
-    static constexpr int DEFAULT_FRAME_SKIP = 2;
-
     GameProxy(GameProxyMode mode);
     ~GameProxy();
 
@@ -31,6 +29,9 @@ public:
 
     void setOnFrameListener(FrameListener listener);
     void setOnKeyListener(KeyListener listener);
+
+    void setFrameSkip(int frameSkip);
+    void setQuality(int quality);
 
     GameProxyMode currentMode() const;
 
@@ -59,7 +60,12 @@ private:
     bool mKeyBuffer[8];
     Frame mFrameBuffer;
 
-    int mFrameSkip;
+    int mFrameSkipPeriod;
+    int mFrameSkipCouner;
+
+    int mQuality;
+
+    FrameCompress mFrameCompress;
 };
 
 #endif

@@ -8,6 +8,12 @@
 
 class CreateServerView : public UIComponent {
 public:
+    struct Data {
+        unsigned short port;
+        int skipFrame;
+        int quality;
+    };
+
     using Clicklistenter = std::function<void(UI_ID, void *)>;
     static constexpr int INPUT_BUFFER_SIZE = 10;
     CreateServerView();
@@ -20,7 +26,9 @@ protected:
     virtual void onRender() override;
 
 private:
-    char inputBuffer[INPUT_BUFFER_SIZE];
+    char mPortBuffer[INPUT_BUFFER_SIZE];
+    char mSkipFrameBuffer[INPUT_BUFFER_SIZE];
+    char mQualityBuffer[INPUT_BUFFER_SIZE];
     std::vector<Clicklistenter> mListeners;
 };
 
