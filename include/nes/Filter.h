@@ -9,10 +9,8 @@ public:
 
     enum class Type { LowPass, HighPass };
 
-    Filter(Type type);
+    Filter(Type type, uint32_t sampleRate, uint32_t freq);
     float step(float x);
-
-    void setParamter(uint32_t sampleRate, uint32_t freq);
 
 private:
     float b0;

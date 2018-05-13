@@ -18,7 +18,6 @@ PPU::PPU(Console *console)
       bufferedData(0) {
     front = new Frame;
     back = new Frame;
-    reset();
 }
 
 PPU::~PPU() {
@@ -33,6 +32,9 @@ void PPU::reset() {
     writeControl(0);
     writeMask(0);
     writeOAMAddress(0);
+    writeScroll(0);
+    writeAddress(0);
+    writeData(0);
 }
 
 uint8_t PPU::readPalette(uint16_t address) {

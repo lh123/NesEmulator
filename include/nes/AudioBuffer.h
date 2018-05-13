@@ -5,22 +5,23 @@
 
 class AudioBuffer {
 public:
-    AudioBuffer(int size);
+    AudioBuffer(int maxSize);
     ~AudioBuffer();
 
     void push(float data);
     float pop();
+    int pop(float *buffer, int maxSize);
     bool isEmpty() const;
     int size() const;
 
 private:
-    float *buffer;
+    float *mAudioBuffer;
 
-    int readIndex;
-    int writeIndex;
+    int mReadIndex;
+    int mWriteIndex;
 
-    int dataCount;
-    int maxSize;
+    int mDataCount;
+    int mMaxSize;
 };
 
 #endif

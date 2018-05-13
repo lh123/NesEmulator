@@ -6,22 +6,21 @@
 #include <fstream>
 
 GameManager::GameManager()
-    : mConsole(nullptr), mRunning(false), mPause(false),
-      mKeyActionPool(50), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {}
+    : mRunning(false), mPause(false), mKeyActionPool(50), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {
+    mConsole = new Console;
+}
 
 GameManager::~GameManager() { stop(); }
 
 bool GameManager::startGame(std::string path) {
     if (!mRunning) {
-        mConsole = new Console(path.c_str());
-        if (!mConsole->isOpenRom()) {
-            delete mConsole;
-            mRunning = false;
-        } else {
+        if (mConsole->loadRom(path)) {
             mRunning = true;
             mPause = false;
             std::thread gameThread([this]() { handleGameThread(); });
             gameThread.detach();
+        } else {
+            mRunning = false;
         }
     }
     return mRunning;
@@ -47,7 +46,6 @@ void GameManager::stop() {
         mRunning = false;
         mPause = true;
         std::lock_guard<std::mutex> lock(mConsoleMutex);
-        delete mConsole;
     }
 }
 
@@ -86,6 +84,16 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
 }
 
 void GameManager::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
+
+void GameManager::setOpenAudio(bool open) { mConsole->setOpenAudio(open); }
+
+AudioBuffer *GameManager::getAudioBuffer() const {
+    if (mRunning) {
+        return mConsole->getAudioBuffer();
+    } else {
+        return nullptr;
+    }
+}
 
 bool GameManager::saveState() {
     if (!mRunning) {
@@ -161,7 +169,9 @@ void GameManager::handleGameThread() {
             }
             frameLastTime = currentTime;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        if (mRunning) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
     }
 }
 

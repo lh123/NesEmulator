@@ -5,15 +5,16 @@
 #include <GLFW/glfw3.h>
 #include <mutex>
 
+#include "ui/Audio.h"
 #include "ui/CreateServerView.h"
 #include "ui/JoinServerView.h"
 #include "ui/KeyMapView.h"
 #include "ui/ID.h"
+#include "ui/Config.h"
 
 #include "nes/GameManager.h"
 #include "net/GameProxy.h"
 
-#include "ui/Config.h"
 
 enum class GameType { Local, Host, Client };
 
@@ -60,6 +61,7 @@ private:
 
 private:
     GLFWwindow *mWindow;
+    Audio *mAudio;
 
     CreateServerView *mCreateServerView;
     JoinServerView *mJoinServerView;
@@ -76,6 +78,9 @@ private:
     unsigned int mFrameTexture;
 
     int mKeyCode[8];
+
+    bool mOpenAudio;
+    bool mAudioInit;
 };
 
 #endif

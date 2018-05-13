@@ -35,6 +35,10 @@ public:
 
     void setOnFrameListener(FrameListener listener);
 
+    void setOpenAudio(bool open);
+
+    AudioBuffer *getAudioBuffer() const;
+
     bool saveState();
     bool loadState();
 

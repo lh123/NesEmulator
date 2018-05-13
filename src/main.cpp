@@ -4,7 +4,7 @@
 int main(int argc, char *argv[]) {
     Window window;
     if (!window.init("NES")) {
-        std::printf("window init error\n");
+        std::cout << "window init error" << std::endl;
         return 0;
     }
     window.run();

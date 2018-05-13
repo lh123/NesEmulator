@@ -9,7 +9,7 @@ BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj
 
 CXX_FLAGS = -g -Wall $(INCLUDE_PATH)
-LD_FLAGS = $(LIB_PATH) -static -Wl,-Bstatic -limgui -lglfw3 -lglad -Wl,-Bdynamic -lSDL2 -lws2_32 -lcomdlg32 -lopengl32 -lgdi32 -Wl,-Bstatic
+LD_FLAGS = $(LIB_PATH) -static -Wl,-Bstatic -limgui -lglfw3 -lglad -Wl,-Bdynamic -lSDL2 -lws2_32 -lcomdlg32 -lopengl32 -lgdi32 -Wl,-Bstatic# -mwindows
 
 all: $(BUILD_DIR)/$(TARGET)
 

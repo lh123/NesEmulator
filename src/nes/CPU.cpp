@@ -153,9 +153,7 @@ static const char *instructionNames[256] = {
 
 CPU::CPU(Console *console)
     : CPUMemory(console), stall(0), cycles(0), PC(0), SP(0), A(0), X(0), Y(0), C(0), Z(0), I(0), D(0), B(0), U(0), V(0),
-      N(0), interrupt(InterruptType::None) {
-    reset();
-}
+      N(0), interrupt(InterruptType::None) {}
 
 CPU::~CPU() {}
 
@@ -177,7 +175,11 @@ void CPU::reset() {
     cycles = 0;
     PC = read16(0xFFFC);
     SP = 0xFD;
+    A = 0;
+    X = 0;
+    Y = 0;
     setFlags(0x24);
+    interrupt = InterruptType::None;
 }
 
 void CPU::printInstruction() {

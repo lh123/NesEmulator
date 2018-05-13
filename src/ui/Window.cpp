@@ -8,7 +8,8 @@
 #include "ui/ImGuiExt.h"
 #include "ui/KeyConfig.h"
 
-Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local) {
+Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local), mOpenAudio(false) {
+    mAudio = new Audio;
     mGameManager = new GameManager;
     mConfig = new Config;
     if (!mConfig->loadFromDisk("./nes.ini")) {
@@ -18,6 +19,7 @@ Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Lo
 }
 
 Window::~Window() {
+    delete mAudio;
     delete mGameManager;
     delete mConfig;
 }
@@ -26,9 +28,11 @@ bool Window::init(const char *title) {
     if (!glfwInit()) {
         return false;
     }
-    // if (!audio->init()) {
-    //     return false;
-    // }
+
+    mAudioInit = mAudio->init();
+    if(mAudioInit) {
+        mAudioInit = mAudio->openAudioDevice(44100);
+    }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -126,6 +130,8 @@ void Window::startGame(std::string path) {
     if (mGameType == GameType::Host || mGameType == GameType::Local) {
         if (mGameManager->isStop()) {
             mGameManager->startGame(path);
+            mAudio->setAudioBuffer(mGameManager->getAudioBuffer());
+            mAudio->play();
         }
     }
 }
@@ -134,6 +140,7 @@ void Window::stopGame() {
     if (mGameType == GameType::Host || mGameType == GameType::Local) {
         if (!mGameManager->isStop()) {
             mGameManager->stop();
+            mAudio->pause();
         }
     }
 }
@@ -251,16 +258,23 @@ void Window::renderGUI() {
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Setting")) {
-            if (ImGui::MenuItem("KeyMap")) {
-                mKeyMapView->setKeyCode(mKeyCode);
-                mKeyMapView->show();
-            }
+        if (ImGui::BeginMenu("Game")) {
             if (ImGui::MenuItem("Save")) {
                 mGameManager->saveState();
             }
             if (ImGui::MenuItem("Load")) {
                 mGameManager->loadState();
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Setting")) {
+            if (ImGui::MenuItem("KeyMap")) {
+                mKeyMapView->setKeyCode(mKeyCode);
+                mKeyMapView->show();
+            }
+            if (ImGui::MenuItem("Audio", nullptr, &mOpenAudio, mAudioInit)) {
+                mGameManager->setOpenAudio(mOpenAudio);
             }
             ImGui::EndMenu();
         }

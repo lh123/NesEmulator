@@ -1,6 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <string>
 #include <cstdint>
 #include "nes/Frame.h"
 #include "nes/AudioBuffer.h"
@@ -19,9 +20,11 @@ class Serialize;
 class Console {
 public:
     static constexpr uint32_t RAM_SIZE = 2048;
-    Console(const char *path);
+    Console();
     ~Console();
 
+    bool loadRom(std::string rom);
+    void reset();
     uint32_t step();
     uint32_t stepFrame();
 
@@ -31,10 +34,11 @@ public:
     Frame *buffer() const;
     Frame::RGBA backgroundColor() const;
 
-    void setAudioSampleRate(uint32_t value);
     AudioBuffer *getAudioBuffer();
 
     bool isOpenRom() const;
+
+    void setOpenAudio(bool open);
 
     void save(Serialize &serialize);
     void load(Serialize &serialize);
@@ -50,6 +54,7 @@ public:
     uint8_t ram[RAM_SIZE];
 
 private:
-    bool isSuccess;
+    bool mIsOpenRom;
+    bool mOpenAudio;
 };
 #endif

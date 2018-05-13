@@ -17,12 +17,13 @@ class Filter;
 
 class APU {
 public:
-public:
+    static constexpr int SAMPLE_RATE = 44100;
+
     APU(Console *console);
     ~APU();
 
+    void reset();
     void step();
-    void setSampleRate(uint32_t sampleRate);
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
 
@@ -44,6 +45,7 @@ private:
     void stepEnvelope();
     void stepSweep();
     void stepLength();
+    void setIRQFlag();
     void fireIRQ();
 
     uint8_t readStatus();
@@ -54,7 +56,6 @@ private:
 private:
     Console *console;
     AudioBuffer *audio;
-    uint32_t sampleRate;
     uint32_t sampleCounter;
     uint64_t cycle;
 
@@ -66,7 +67,8 @@ private:
 
     uint8_t framePeriod; // step mode (4 or 5)
     uint8_t frameCounter;
-    bool frameIRQ;
+    bool frameIRQDisable;
+    bool frameIRQFlag;
 
     Filter *filterChain[3];
 };

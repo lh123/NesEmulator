@@ -11,28 +11,56 @@
 #include "nes/Filter.h"
 #include "nes/Serialize.hpp"
 
-Console::Console(const char *path) : ram{0} {
-    cartridge = new Cartridge();
-    isSuccess = cartridge->loadNesFile(path);
-    if (isSuccess) {
-        mapper = Mapper::create(this);
-        cpu = new CPU(this);
-        ppu = new PPU(this);
-        apu = new APU(this);
-        controller1 = new Controller();
-        controller2 = new Controller();
-    }
+Console::Console() : cartridge(nullptr), mapper(nullptr), ram{0}, mIsOpenRom(false), mOpenAudio(false) {
+    cpu = new CPU(this);
+    ppu = new PPU(this);
+    apu = new APU(this);
+    controller1 = new Controller();
+    controller2 = new Controller();
 }
 
 Console::~Console() {
-    if (isSuccess) {
-        Mapper::free(mapper);
-        delete controller2;
-        delete controller1;
-        delete apu;
-        delete ppu;
-        delete cpu;
+    delete controller2;
+    delete controller1;
+    delete apu;
+    delete ppu;
+    delete cpu;
+    if (cartridge != nullptr) {
+        delete[] cartridge;
     }
+    if (mapper != nullptr) {
+        Mapper::free(mapper);
+    }
+}
+
+bool Console::loadRom(std::string rom) {
+    if (cartridge != nullptr) {
+        delete cartridge;
+        cartridge = nullptr;
+    }
+    if (mapper != nullptr) {
+        Mapper::free(mapper);
+        mapper = nullptr;
+    }
+    cartridge = new Cartridge();
+    mIsOpenRom = false;
+    if (cartridge->loadNesFile(rom.c_str())) {
+        mapper = Mapper::create(this);
+        if (mapper != nullptr) {
+            reset();
+            mIsOpenRom = true;
+        }
+    } else {
+        delete cartridge;
+        cartridge = nullptr;
+    }
+    return mIsOpenRom;
+}
+
+void Console::reset() {
+    cpu->reset();
+    ppu->reset();
+    apu->reset();
 }
 
 uint32_t Console::step() {
@@ -43,8 +71,9 @@ uint32_t Console::step() {
         mapper->step();
     }
     for (uint32_t i = 0; i < cpuCycles; i++) {
-        // apu->step();
+        apu->step();
     }
+
     return cpuCycles;
 }
 
@@ -78,11 +107,11 @@ Frame *Console::buffer() const { return ppu->front; }
 
 Frame::RGBA Console::backgroundColor() const { return palette[ppu->readPalette(0) % 64]; }
 
-void Console::setAudioSampleRate(uint32_t value) { apu->setSampleRate(value); }
-
 AudioBuffer *Console::getAudioBuffer() { return apu->getAudioBuffer(); }
 
-bool Console::isOpenRom() const { return isSuccess; }
+bool Console::isOpenRom() const { return mIsOpenRom; }
+
+void Console::setOpenAudio(bool open) { mOpenAudio = open; }
 
 void Console::save(Serialize &serialize) {
     serialize.writeArray(ram, RAM_SIZE);

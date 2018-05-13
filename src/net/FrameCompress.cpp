@@ -7,7 +7,6 @@
 
 #include <iostream>
 #include <string.h>
-#include <fstream>
 
 void compressCallback(void *context, void *data, int size) {
     FrameCompress *compress = reinterpret_cast<FrameCompress *>(context);

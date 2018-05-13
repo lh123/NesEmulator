@@ -15,7 +15,7 @@ void CreateServerView::onBeforeRender() { ImGui::SetNextWindowSize(ImVec2(270, 1
 
 void CreateServerView::onShow() {
     strcpy(mPortBuffer, "5000");
-    strcpy(mSkipFrameBuffer, "30");
+    strcpy(mSkipFrameBuffer, "1");
     strcpy(mQualityBuffer, "80");
 }
 

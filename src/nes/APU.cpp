@@ -43,9 +43,8 @@ static void initTable() {
 }
 
 APU::APU(Console *console)
-    : console(console), sampleRate(0), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0),
-      frameIRQ(false), filterChain{new Filter(Filter::Type::HighPass), new Filter(Filter::Type::HighPass),
-                                   new Filter(Filter::Type::LowPass)} {
+    : console(console), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0), frameIRQDisable(false),
+      frameIRQFlag(false) {
     initTable();
     pulse1 = new Pulse(1);
     pulse2 = new Pulse(2);
@@ -54,6 +53,10 @@ APU::APU(Console *console)
     dmc = new DMC(console->cpu);
 
     audio = new AudioBuffer(4096);
+
+    filterChain[0] = new Filter(Filter::Type::HighPass, SAMPLE_RATE, 90);
+    filterChain[1] = new Filter(Filter::Type::HighPass, SAMPLE_RATE, 440);
+    filterChain[2] = new Filter(Filter::Type::LowPass, SAMPLE_RATE, 14000);
 }
 
 APU::~APU() {
@@ -63,14 +66,23 @@ APU::~APU() {
     delete noise;
     delete dmc;
 
-    for (int i = 0; i < 3; i++) {
-        delete filterChain[i];
+    for (auto *filter : filterChain) {
+        delete filter;
+    }
+}
+
+void APU::reset() {
+    writeRegister(0x4017, 0);
+    writeRegister(0x4015, 0);
+    for (uint16_t address = 0x4000; address <= 0x400F; address++) {
+        writeRegister(address, 0);
     }
 }
 
 // call peer cpu cycle
 void APU::step() {
     stepTimer();
+    fireIRQ();
     cycle++;
     if (framePeriod == 4) {
         stepFourStepFrame();
@@ -78,23 +90,17 @@ void APU::step() {
         stepFiveStepFrame();
     }
     sampleCounter++;
-    if (sampleCounter == CPU::CPU_FREQUENCY / sampleRate) {
+    if (sampleCounter == CPU::CPU_FREQUENCY / SAMPLE_RATE) {
         sendSample();
         sampleCounter = 0;
     }
 }
 
-void APU::setSampleRate(uint32_t value) {
-    sampleRate = value;
-    filterChain[0]->setParamter(value, 90);
-    filterChain[1]->setParamter(value, 440);
-    filterChain[2]->setParamter(value, 14000);
-}
-
 void APU::sendSample() {
     float x = output();
-    for (int i = 0; i < 3; i++) {
-        x = filterChain[i]->step(x);
+    for (auto *filter : filterChain) {
+        float temp = filter->step(x);
+        x = temp;
     }
     audio->push(x);
 }
@@ -122,14 +128,14 @@ void APU::stepFourStepFrame() {
     } else if (cycle == 11185.5 * 2) {
         stepQuarterFrame();
     } else if (cycle == 14914 * 2) {
-        fireIRQ();
+        setIRQFlag();
     } else if (cycle == 14914.5 * 2) {
         stepQuarterFrame();
         stepHalfFrame();
-        fireIRQ();
+        setIRQFlag();
     } else if (cycle == 14915 * 2) {
         cycle = 0;
-        fireIRQ();
+        setIRQFlag();
     }
 }
 
@@ -188,8 +194,14 @@ void APU::stepLength() {
     noise->stepLength();
 }
 
+void APU::setIRQFlag() {
+    if (!frameIRQDisable) {
+        frameIRQFlag = true;
+    }
+}
+
 void APU::fireIRQ() {
-    if (frameIRQ) {
+    if (!frameIRQDisable && frameIRQFlag) {
         console->cpu->triggerIRQ();
     }
 }
@@ -298,8 +310,8 @@ uint8_t APU::readStatus() {
     if (dmc->bytesRemainingCounter > 0) {
         result |= 0x10;
     }
-    if (frameIRQ) {
-        frameIRQ = false;
+    if (!frameIRQDisable && frameIRQFlag) {
+        frameIRQFlag = false;
         result |= 0x40;
     }
     if (dmc->interrupt) {
@@ -347,7 +359,9 @@ void APU::writeControl(uint8_t value) {
 
 void APU::writeFrameCounter(uint8_t value) {
     framePeriod = 4 + ((value >> 7) & 0x1);
-    frameIRQ = ((value >> 6) & 0x1) == 0;
+    frameIRQFlag = false;
+    frameIRQDisable = ((value >> 6) & 0x1) == 1;
+
     // 5-step mode has extra step
     if (framePeriod == 5) {
         stepQuarterFrame();
@@ -361,7 +375,8 @@ void APU::save(Serialize &serialize) {
     serialize << cycle;
     serialize << framePeriod;
     serialize << frameCounter;
-    serialize << frameIRQ;
+    serialize << frameIRQDisable;
+    serialize << frameIRQFlag;
     pulse1->save(serialize);
     pulse2->save(serialize);
     triangle->save(serialize);
@@ -373,7 +388,8 @@ void APU::load(Serialize &serialize) {
     serialize >> cycle;
     serialize >> framePeriod;
     serialize >> frameCounter;
-    serialize >> frameIRQ;
+    serialize >> frameIRQDisable;
+    serialize >> frameIRQFlag;
     pulse1->load(serialize);
     pulse2->load(serialize);
     triangle->load(serialize);

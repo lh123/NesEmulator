@@ -1,36 +1,40 @@
 #include "nes/AudioBuffer.h"
+#include <string.h>
 
-AudioBuffer::AudioBuffer(int size) : readIndex(0), writeIndex(0), dataCount(0), maxSize(size) {
-    buffer = new float[size]{0};
+AudioBuffer::AudioBuffer(int maxSize) : mReadIndex(0), mWriteIndex(0), mDataCount(0), mMaxSize(maxSize) {
+    mAudioBuffer = new float[mMaxSize]{0};
 }
 
-AudioBuffer::~AudioBuffer() { delete[] buffer; }
+AudioBuffer::~AudioBuffer() { delete[] mAudioBuffer; }
 
 void AudioBuffer::push(float data) {
-    if (dataCount < maxSize) {
-        buffer[writeIndex] = data;
-        writeIndex++;
-        if (writeIndex >= maxSize) {
-            writeIndex = 0;
+    if (mDataCount < mMaxSize) {
+        mAudioBuffer[mWriteIndex] = data;
+        mWriteIndex++;
+        if (mWriteIndex >= mMaxSize) {
+            mWriteIndex = 0;
         }
-        dataCount++;
+        mDataCount++;
     }
 }
 
-float AudioBuffer::pop() {
-    if (dataCount > 0) {
-        float data = buffer[readIndex];
-        readIndex++;
-        if (readIndex >= maxSize) {
-            readIndex = 0;
-        }
-        dataCount--;
-        return data;
+int AudioBuffer::pop(float *buffer, int maxCount) {
+    int popCount = maxCount > mDataCount ? mDataCount : maxCount;
+    mDataCount -= popCount;
+
+    if (mReadIndex + popCount < mMaxSize) {
+        memcpy(buffer, mAudioBuffer + mReadIndex, popCount * sizeof(float));
+        mReadIndex += popCount;
     } else {
-        return 0;
+        int firstPopCount = mMaxSize - mReadIndex;
+        int lastPopCount = popCount - firstPopCount;
+        memcpy(buffer, mAudioBuffer + mReadIndex, firstPopCount * sizeof(float));
+        memcpy(buffer + firstPopCount, mAudioBuffer, lastPopCount * sizeof(float));
+        mReadIndex = lastPopCount;
     }
+    return popCount;
 }
 
-bool AudioBuffer::isEmpty() const { return dataCount == 0; }
+bool AudioBuffer::isEmpty() const { return mDataCount == 0; }
 
-int AudioBuffer::size() const { return dataCount; }
+int AudioBuffer::size() const { return mDataCount; }
