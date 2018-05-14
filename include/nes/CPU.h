@@ -60,6 +60,8 @@ public:
     void reset();
     void printInstruction();
 
+    void stallCycle(uint32_t cycle);
+    uint64_t currentCycle() const;
     uint32_t step();
 
     uint8_t flags();
@@ -155,12 +157,10 @@ public:
     friend void tas(CPU *cpu, CPU::StepInfo *info);
     friend void xaa(CPU *cpu, CPU::StepInfo *info);
 
-public:
-    uint8_t stall;   // number of cycles to stall
-    uint64_t cycles; // number of cycles
-
 private:
     // Console *console;
+    uint32_t stall;   // number of cycles to stall
+    uint64_t cycles; // number of cycles
 
     uint16_t PC; // program counter
     uint8_t SP;  // stack pointer

@@ -207,6 +207,10 @@ void CPU::printInstruction() {
     std::printf(buffer);
 }
 
+void CPU::stallCycle(uint32_t cycle) { stall += cycle; }
+
+uint64_t CPU::currentCycle() const { return cycles; }
+
 uint32_t CPU::step() {
     if (stall > 0) {
         stall--;

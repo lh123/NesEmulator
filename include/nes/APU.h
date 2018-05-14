@@ -152,7 +152,7 @@ public:
     uint16_t timerPeriod;
     uint16_t timerCounter;
 
-    uint8_t linearCounterPeriod;
+    uint8_t linearCounterReloadValue;
     uint8_t linearCounter;
     bool linearCounterReload;
 
@@ -216,6 +216,8 @@ public:
     void stepReader();
     void stepShifter();
 
+    uint8_t output();
+
     void save(Serialize &serialize);
     void load(Serialize &serialize);
 
@@ -225,7 +227,6 @@ public:
     bool irqEnable;
     bool interrupt;
     uint8_t rateIndex;
-    uint8_t frequency;
 
     uint16_t sampleAddress;
     uint16_t sampleLength;

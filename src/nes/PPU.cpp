@@ -218,9 +218,9 @@ void PPU::writeDMA(uint8_t value) {
         oamAddress++;
         address++;
     }
-    cpu->stall += 513;
-    if (cpu->cycles % 2 == 1) {
-        cpu->stall++;
+    cpu->stallCycle(513);
+    if (cpu->currentCycle() % 2 == 1) {
+        cpu->stallCycle(1);
     }
 }
 

@@ -77,6 +77,9 @@ void APU::reset() {
     for (uint16_t address = 0x4000; address <= 0x400F; address++) {
         writeRegister(address, 0);
     }
+    noise->shiftRegister = 0x1;
+    dmc->outputLevel = 0;
+    dmc->addressCounter = 0xC000;
 }
 
 // call peer cpu cycle
@@ -112,7 +115,7 @@ float APU::output() {
     uint8_t p2 = pulse2->output();
     uint8_t t = triangle->output();
     uint8_t n = noise->output();
-    uint8_t d = dmc->outputLevel;
+    uint8_t d = dmc->output();
 
     float pulseOut = pulseTable[p1 + p2];
     float tndOut = tndTable[3 * t + 2 * n + d];
@@ -170,7 +173,6 @@ void APU::stepTimer() {
         pulse1->stepTimer();
         pulse2->stepTimer();
         noise->stepTimer();
-        dmc->stepReader();
         dmc->stepTimer();
     }
     triangle->stepTimer();
@@ -464,11 +466,11 @@ void Pulse::writeTimerLow(uint8_t value) {
 void Pulse::writeTimerHigh(uint8_t value) {
     if (enabled) {
         lengthCounter = lengthTable[value >> 3];
-        timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
-        // calculationTargetPeriod();
-        sequenceStep = 0;
-        envelopeStart = true;
     }
+    timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
+    // calculationTargetPeriod();
+    sequenceStep = 0;
+    envelopeStart = true;
 }
 
 // this timer is updated every APU cycle(every second CPU cycle)
@@ -616,7 +618,7 @@ void Pulse::load(Serialize &serialize) {
 
 Triangle::Triangle()
     : enabled(false), lengthCounterHalt(false), control(false), lengthCounter(0), timerPeriod(0), timerCounter(0),
-      linearCounterPeriod(0), linearCounter(0), linearCounterReload(false), sequencesStep(0) {}
+      linearCounterReloadValue(0), linearCounter(0), linearCounterReload(false), sequencesStep(0) {}
 
 Triangle::~Triangle() {}
 
@@ -628,8 +630,8 @@ Triangle::~Triangle() {}
  */
 void Triangle::writeControl(uint8_t value) {
     lengthCounterHalt = ((value >> 7) & 0x1) == 0x1;
-    control = ((value >> 7) & 0x1) == 0x1;
-    linearCounterPeriod = value & 0x7F;
+    control = lengthCounterHalt;
+    linearCounterReloadValue = value & 0x7F;
 }
 
 /**
@@ -646,12 +648,10 @@ void Triangle::writeTimerLow(uint8_t value) { timerPeriod = (timerPeriod & 0xFF0
  * Sets the linear counter reload flag
  */
 void Triangle::writeTimerHigh(uint8_t value) {
-    if (enabled) {
-        lengthCounter = lengthTable[value >> 3];
-        timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
-        timerCounter = timerPeriod;
-        linearCounterReload = true;
-    }
+    lengthCounter = lengthTable[value >> 3];
+    timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
+    // timerCounter = timerPeriod;
+    linearCounterReload = true;
 }
 
 // clock every cpu cycle
@@ -669,7 +669,7 @@ void Triangle::stepTimer() {
 }
 
 void Triangle::stepLength() {
-    if (enabled && !lengthCounterHalt && lengthCounter > 0) {
+    if (!lengthCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -677,7 +677,7 @@ void Triangle::stepLength() {
 // clock by frame counter
 void Triangle::stepLinearCounter() {
     if (linearCounterReload) {
-        linearCounter = linearCounterPeriod;
+        linearCounter = linearCounterReloadValue;
     } else {
         if (linearCounter > 0) {
             linearCounter--;
@@ -693,12 +693,6 @@ uint8_t Triangle::output() {
     if (!enabled) {
         return 0;
     }
-    if (lengthCounter == 0) {
-        return 0;
-    }
-    if (linearCounter == 0) {
-        return 0;
-    }
     return triangleTable[sequencesStep];
 }
 
@@ -709,7 +703,7 @@ void Triangle::save(Serialize &serialize) {
     serialize << lengthCounter;
     serialize << timerPeriod;
     serialize << timerCounter;
-    serialize << linearCounterPeriod;
+    serialize << linearCounterReloadValue;
     serialize << linearCounter;
     serialize << linearCounterReload;
     serialize << sequencesStep;
@@ -722,14 +716,15 @@ void Triangle::load(Serialize &serialize) {
     serialize >> lengthCounter;
     serialize >> timerPeriod;
     serialize >> timerCounter;
-    serialize >> linearCounterPeriod;
+    serialize >> linearCounterReloadValue;
     serialize >> linearCounter;
     serialize >> linearCounterReload;
     serialize >> sequencesStep;
 }
 
+// On power-up, the shift register is loaded with the value 1.
 Noise::Noise()
-    : enabled(false), mode(false), shiftRegister(0), lenghtCounterHalt(false), lengthCounter(0), timerPeriod(0),
+    : enabled(false), mode(false), shiftRegister(1), lenghtCounterHalt(false), lengthCounter(0), timerPeriod(0),
       timerCounter(0), envelopeEnabled(false), envelopeLoop(false), envelopeStart(false), envelopeDividerPeriod(0),
       envelopeDividerCounter(0), envelopeDecayCounter(0), constantVolume(0), envelopeOutputVolume(0) {}
 
@@ -744,7 +739,7 @@ Noise::~Noise() {}
  */
 void Noise::writeControl(uint8_t value) {
     lenghtCounterHalt = ((value >> 5) & 0x1) == 0x1;
-    envelopeLoop = ((value >> 5) & 0x1) == 0x1;
+    envelopeLoop = lenghtCounterHalt;
     envelopeEnabled = ((value >> 4) & 0x1) == 0;
     envelopeDividerPeriod = value & 0x0F;
     constantVolume = value & 0x0F;
@@ -823,7 +818,7 @@ void Noise::stepEnvelope() {
 }
 
 void Noise::stepLength() {
-    if (enabled && !lenghtCounterHalt && lengthCounter > 0) {
+    if (!lenghtCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -884,10 +879,10 @@ void Noise::load(Serialize &serialize) {
 }
 
 DMC::DMC(CPU *cpu)
-    : enabled(false), loop(false), irqEnable(false), interrupt(false), rateIndex(0), frequency(0), sampleAddress(0),
-      sampleLength(0), sampleBuffer(0), sampleBufferBitCount(0), addressCounter(0), bytesRemainingCounter(0),
-      timerPeriod(0), timerCounter(0), shiftRegister(0), bitsRemainingCounter(0), outputLevel(0), silence(false),
-      outputCycleEnd(false), cpu(cpu) {}
+    : enabled(false), loop(false), irqEnable(false), interrupt(false), rateIndex(0), sampleAddress(0), sampleLength(0),
+      sampleBuffer(0), sampleBufferBitCount(0), addressCounter(0xC000), bytesRemainingCounter(0), timerPeriod(0),
+      timerCounter(0), shiftRegister(0), bitsRemainingCounter(0), outputLevel(0), silence(false), outputCycleEnd(false),
+      cpu(cpu) {}
 
 DMC::~DMC() {}
 
@@ -905,7 +900,7 @@ void DMC::writeControl(uint8_t value) {
     }
     loop = (value & 0x40) == 0x40;
     rateIndex = value & 0x0F;
-    frequency = dmcTable[rateIndex];
+    timerPeriod = dmcTable[rateIndex];
 }
 
 /**
@@ -926,6 +921,10 @@ void DMC::restart() {
 
 // clock every second cpu cycle
 void DMC::stepTimer() {
+    if(!enabled) {
+        return;
+    }
+    stepReader();
     if (outputCycleEnd) {
         outputCycleEnd = false;
         bitsRemainingCounter = 8;
@@ -949,11 +948,11 @@ void DMC::stepTimer() {
             if (outputLevel + delta <= 127 && outputLevel + delta >= 0) {
                 outputLevel += delta;
             }
-            shiftRegister >>= 1;
-            bitsRemainingCounter--;
-            if (bitsRemainingCounter == 0) {
-                outputCycleEnd = true;
-            }
+        }
+        shiftRegister >>= 1;
+        bitsRemainingCounter--;
+        if (bitsRemainingCounter == 0) {
+            outputCycleEnd = true;
         }
     } else {
         timerCounter--;
@@ -963,7 +962,7 @@ void DMC::stepTimer() {
 // clock every cycle
 void DMC::stepReader() {
     if (sampleBufferBitCount == 0 && bytesRemainingCounter > 0) {
-        cpu->stall += 4;
+        cpu->stallCycle(4);
         sampleBuffer = cpu->read(addressCounter);
         sampleBufferBitCount = 8;
         addressCounter++;
@@ -971,10 +970,13 @@ void DMC::stepReader() {
             addressCounter = 0x8000;
         }
         bytesRemainingCounter--;
-        if (bytesRemainingCounter == 0 && loop) {
-            restart();
-        } else {
-            if (irqEnable) {
+        // The bytes remaining counter is decremented; if it becomes zero and the loop flag is set, the sample is
+        // restarted (see above); otherwise, if the bytes remaining counter becomes zero and the IRQ enabled flag is
+        // set, the interrupt flag is set.
+        if (bytesRemainingCounter == 0) {
+            if (loop) {
+                restart();
+            } else if (irqEnable) {
                 interrupt = true;
             }
         }
@@ -984,13 +986,19 @@ void DMC::stepReader() {
     }
 }
 
+uint8_t DMC::output() {
+    // if (!enabled) {
+    //     return 0;
+    // }
+    return outputLevel;
+}
+
 void DMC::save(Serialize &serialize) {
     serialize << enabled;
     serialize << loop;
     serialize << irqEnable;
     serialize << interrupt;
     serialize << rateIndex;
-    serialize << frequency;
     serialize << sampleAddress;
     serialize << sampleLength;
     serialize << sampleBuffer;
@@ -1012,7 +1020,6 @@ void DMC::load(Serialize &serialize) {
     serialize >> irqEnable;
     serialize >> interrupt;
     serialize >> rateIndex;
-    serialize >> frequency;
     serialize >> sampleAddress;
     serialize >> sampleLength;
     serialize >> sampleBuffer;
