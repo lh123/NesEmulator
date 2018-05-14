@@ -111,8 +111,6 @@ AudioBuffer *Console::getAudioBuffer() { return apu->getAudioBuffer(); }
 
 bool Console::isOpenRom() const { return mIsOpenRom; }
 
-void Console::setOpenAudio(bool open) { mOpenAudio = open; }
-
 void Console::save(Serialize &serialize) {
     serialize.writeArray(ram, RAM_SIZE);
     cpu->save(serialize);

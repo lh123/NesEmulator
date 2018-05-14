@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 
+#include "nes/AudioBuffer.h"
 #include "net/GamePacket.h"
 #include "net/Server.h"
 #include "net/Client.h"
@@ -13,7 +14,7 @@ enum class GameProxyMode { Host, Client };
 class GameProxy {
 public:
     using FrameListener = std::function<void(const Frame *)>;
-    using KeyListener = std::function<void(Button button, bool pressed)>;
+    using KeyListener = std::function<void(Button, bool)>;
 
     GameProxy(GameProxyMode mode);
     ~GameProxy();
@@ -26,9 +27,12 @@ public:
 
     void sendKeyInfoToServer(Button button, bool pressed);
     void sendFrameInfoToServer(const Frame *frame);
+    void sendAudioInfoToServer(const float *audioBuffer, int length);
 
     void setOnFrameListener(FrameListener listener);
     void setOnKeyListener(KeyListener listener);
+
+    AudioBuffer *getAudioBuffer();
 
     void setFrameSkip(int frameSkip);
     void setQuality(int quality);
@@ -59,6 +63,7 @@ private:
 
     bool mKeyBuffer[8];
     Frame mFrameBuffer;
+    AudioBuffer mAudioBuffer;
 
     int mFrameSkipPeriod;
     int mFrameSkipCouner;

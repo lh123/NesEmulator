@@ -8,7 +8,7 @@
 #include "ui/ImGuiExt.h"
 #include "ui/KeyConfig.h"
 
-Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local), mOpenAudio(false) {
+Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local), mOpenAudio(true) {
     mAudio = new Audio;
     mGameManager = new GameManager;
     mConfig = new Config;
@@ -30,7 +30,7 @@ bool Window::init(const char *title) {
     }
 
     mAudioInit = mAudio->init();
-    if(mAudioInit) {
+    if (mAudioInit) {
         mAudioInit = mAudio->openAudioDevice(44100);
     }
 
@@ -166,6 +166,12 @@ void Window::startGameHost(unsigned short port, int quality, int frameSkip) {
         }
         mGameManager->setKeyPressed(2, button, presses);
     });
+    mAudio->setOnFillAudioListener([this](const float *audio, int length) {
+        if (mGameManager->isStop() || mGameManager->isPause()) {
+            return;
+        }
+        mGameProxy->sendAudioInfoToServer(audio, length);
+    });
 }
 
 void Window::stopGameHost() {
@@ -180,6 +186,8 @@ void Window::stopGameHost() {
     mGameProxy->stopServer();
     delete mGameProxy;
     mGameProxy = nullptr;
+
+    mAudio->setOnFillAudioListener(nullptr);
 }
 
 void Window::connectToHost(std::string ip, unsigned short port) {
@@ -196,6 +204,8 @@ void Window::connectToHost(std::string ip, unsigned short port) {
     mGameProxy = new GameProxy(GameProxyMode::Client);
     mGameProxy->connectTo(ip, port);
     mGameProxy->setOnFrameListener([this](const Frame *frame) { processGameFrame(frame); });
+    mAudio->setAudioBuffer(mGameProxy->getAudioBuffer());
+    mAudio->play();
 }
 
 void Window::disconnect() {
@@ -274,7 +284,11 @@ void Window::renderGUI() {
                 mKeyMapView->show();
             }
             if (ImGui::MenuItem("Audio", nullptr, &mOpenAudio, mAudioInit)) {
-                mGameManager->setOpenAudio(mOpenAudio);
+                if (mOpenAudio) {
+                    mAudio->play();
+                } else {
+                    mAudio->pause();
+                }
             }
             ImGui::EndMenu();
         }

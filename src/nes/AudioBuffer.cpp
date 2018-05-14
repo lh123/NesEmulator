@@ -35,6 +35,12 @@ int AudioBuffer::pop(float *buffer, int maxCount) {
     return popCount;
 }
 
+void AudioBuffer::clear() {
+    mReadIndex = 0;
+    mWriteIndex = 0;
+    mDataCount = 0;
+}
+
 bool AudioBuffer::isEmpty() const { return mDataCount == 0; }
 
 int AudioBuffer::size() const { return mDataCount; }

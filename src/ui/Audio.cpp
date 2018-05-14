@@ -7,16 +7,18 @@ Audio::Audio() : mHaveInit(false), mAudioBuffer(nullptr) {}
 Audio::~Audio() { release(); }
 
 void fillAudio(void *udata, uint8_t *stream, int len) {
-    std::memset(stream, 0, len);
     Audio *audio = reinterpret_cast<Audio *>(udata);
-    float *pStram = reinterpret_cast<float *>(stream);
+    float *audioBuffer = reinterpret_cast<float *>(stream);
     if (audio->mAudioBuffer != nullptr) {
         AudioBuffer *buffer = audio->mAudioBuffer;
         int maxlen = len / sizeof(float);
-        int fillLength = buffer->pop(pStram, maxlen);
-        float fillValue = fillLength > 0 ? pStram[fillLength - 1] : 0;
+        int fillLength = buffer->pop(audioBuffer, maxlen);
+        float fillValue = fillLength > 0 ? audioBuffer[fillLength - 1] : 0;
         for (int i = fillLength; i < maxlen; i++) {
-            pStram[i] = fillValue;
+            audioBuffer[i] = fillValue;
+        }
+        if (audio->mListener != nullptr && fillLength > 0) {
+            audio->mListener(audioBuffer, fillLength);
         }
     }
 }
@@ -54,8 +56,15 @@ bool Audio::openAudioDevice(uint16_t sampleRate) {
 
 void Audio::play() { SDL_PauseAudio(0); }
 
-void Audio::pause() { SDL_PauseAudio(1); }
+void Audio::pause() {
+    SDL_PauseAudio(1);
+    if (mAudioBuffer != nullptr) {
+        mAudioBuffer->clear();
+    }
+}
 
 void Audio::close() { SDL_Quit(); }
 
 void Audio::setAudioBuffer(AudioBuffer *buffer) { mAudioBuffer = buffer; }
+
+void Audio::setOnFillAudioListener(FillAudioListener listener) { mListener = listener; }

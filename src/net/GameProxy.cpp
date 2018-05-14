@@ -3,8 +3,8 @@
 #include <string.h>
 
 GameProxy::GameProxy(GameProxyMode mode)
-    : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mFrameSkipPeriod(0), mFrameSkipCouner(0),
-      mQuality(80) {
+    : mMode(mode), mHaveRecvPacketHead(false), mKeyBuffer{false}, mAudioBuffer(4096), mFrameSkipPeriod(0),
+      mFrameSkipCouner(0), mQuality(80) {
     mServer = new Server;
     mClient = new Client;
     mClient->setDataRecvListener([this](const char *data, int size) { this->handleDataRecv(data, size); });
@@ -89,9 +89,19 @@ void GameProxy::sendFrameInfoToServer(const Frame *frame) {
     }
 }
 
+void GameProxy::sendAudioInfoToServer(const float *audioBuffer, int length) {
+    GamePacketHead head;
+    head.type = GamePacketType::Audio;
+    head.size = sizeof(float) * length;
+    mClient->sendData(reinterpret_cast<char *>(&head), sizeof(GamePacketHead));
+    mClient->sendData(reinterpret_cast<const char *>(audioBuffer), head.size);
+}
+
 void GameProxy::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
 
 void GameProxy::setOnKeyListener(KeyListener listener) { mKeyListener = listener; }
+
+AudioBuffer *GameProxy::getAudioBuffer() { return &mAudioBuffer; }
 
 void GameProxy::setFrameSkip(int frameSkip) { mFrameSkipPeriod = frameSkip; }
 
@@ -146,5 +156,9 @@ void GameProxy::handleGameKey(const char *data, int size) {
 }
 
 void GameProxy::handleGameAudio(const char *data, int size) {
-    // TODO
+    const float *audio = reinterpret_cast<const float *>(data);
+    int len = size / sizeof(float);
+    for (int i = 0; i < len; i++) {
+        mAudioBuffer.push(audio[i]);
+    }
 }

@@ -11,6 +11,7 @@ public:
     void push(float data);
     float pop();
     int pop(float *buffer, int maxSize);
+    void clear();
     bool isEmpty() const;
     int size() const;
 

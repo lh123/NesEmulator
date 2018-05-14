@@ -85,8 +85,6 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
 
 void GameManager::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
 
-void GameManager::setOpenAudio(bool open) { mConsole->setOpenAudio(open); }
-
 AudioBuffer *GameManager::getAudioBuffer() const {
     if (mRunning) {
         return mConsole->getAudioBuffer();

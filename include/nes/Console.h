@@ -38,8 +38,6 @@ public:
 
     bool isOpenRom() const;
 
-    void setOpenAudio(bool open);
-
     void save(Serialize &serialize);
     void load(Serialize &serialize);
 public:

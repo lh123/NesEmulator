@@ -28,12 +28,14 @@ public:
     void writeRegister(uint16_t address, uint8_t value);
 
     AudioBuffer *getAudioBuffer() const;
-    float output();
+
+    float sample() const;
 
     void save(Serialize &serialize);
     void load(Serialize &serialize);
 
 private:
+    float output();    
     void sendSample();
 
     void stepFourStepFrame();
@@ -71,6 +73,7 @@ private:
     bool frameIRQFlag;
 
     Filter *filterChain[3];
+    float sampleValue;
 };
 
 class Pulse {

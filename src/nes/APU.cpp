@@ -44,7 +44,7 @@ static void initTable() {
 
 APU::APU(Console *console)
     : console(console), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0), frameIRQDisable(false),
-      frameIRQFlag(false) {
+      frameIRQFlag(false), sampleValue(0) {
     initTable();
     pulse1 = new Pulse(1);
     pulse2 = new Pulse(2);
@@ -100,15 +100,17 @@ void APU::step() {
 }
 
 void APU::sendSample() {
-    float x = output();
+    sampleValue = output();
     for (auto *filter : filterChain) {
-        float temp = filter->step(x);
-        x = temp;
+        float temp = filter->step(sampleValue);
+        sampleValue = temp;
     }
-    audio->push(x);
+    audio->push(sampleValue);
 }
 
 AudioBuffer *APU::getAudioBuffer() const { return audio; }
+
+float APU::sample() const { return sampleValue; }
 
 float APU::output() {
     uint8_t p1 = pulse1->output();
@@ -921,7 +923,7 @@ void DMC::restart() {
 
 // clock every second cpu cycle
 void DMC::stepTimer() {
-    if(!enabled) {
+    if (!enabled) {
         return;
     }
     stepReader();
