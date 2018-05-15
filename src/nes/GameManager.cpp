@@ -5,8 +5,7 @@
 #include <chrono>
 #include <fstream>
 
-GameManager::GameManager()
-    : mRunning(false), mPause(false), mKeyActionPool(50), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {
+GameManager::GameManager() : mRunning(false), mPause(false), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {
     mConsole = new Console;
 }
 
@@ -28,24 +27,28 @@ bool GameManager::startGame(std::string path) {
 
 void GameManager::pause() {
     if (!mPause && mRunning) {
-        mPause = true;
-        std::lock_guard<std::mutex> lock(mConsoleMutex);
+        GameStateEvent event;
+        event.pause = true;
+        event.running = mRunning;
+        pushEvent(event);
     }
 }
 
 void GameManager::resume() {
     if (mPause && mRunning) {
-        mPause = false;
-        std::thread gameThread([this]() { handleGameThread(); });
-        gameThread.detach();
+        GameStateEvent event;
+        event.pause = false;
+        event.running = mRunning;
+        pushEvent(event);
     }
 }
 
 void GameManager::stop() {
     if (mRunning) {
-        mRunning = false;
-        mPause = true;
-        std::lock_guard<std::mutex> lock(mConsoleMutex);
+        GameStateEvent event;
+        event.pause = mPause;
+        event.running = false;
+        pushEvent(event);
     }
 }
 
@@ -71,19 +74,15 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
         }
     }
     if (mRunning && !mPause) {
-        KeyAction *action = mKeyActionPool.get();
-        if (action != nullptr) {
-            action->player = player;
-            action->button = button;
-            action->pressed = pressed;
-
-            std::lock_guard<std::mutex> lock(mActionQueueMutex);
-            mActionQueue.push(action);
-        }
+        KeyEvent event;
+        event.player = player;
+        event.button = button;
+        event.pressed = pressed;
+        pushEvent(event);
     }
 }
 
-void GameManager::setOnFrameListener(FrameListener listener) { mFrameListener = listener; }
+void GameManager::setOnFrameListener(const FrameListener &listener) { mFrameListener = listener; }
 
 AudioBuffer *GameManager::getAudioBuffer() const {
     if (mRunning) {
@@ -97,68 +96,49 @@ bool GameManager::saveState() {
     if (!mRunning) {
         return false;
     }
-    bool ret = false;
-    pause();
-    std::fstream stateFile("state.sav", std::ios::binary | std::ios::out);
-    if (stateFile.is_open()) {
-        Serialize state(&stateFile);
-        state << 0xFFEE;
-        mConsole->save(state);
-        ret = true;
-    } else {
-        ret = false;
-    }
-    resume();
-    return ret;
+    SaveStateEvent event;
+    strcpy(event.fileName, "state.sav");
+    pushEvent(event);
+    return true;
 }
 
 bool GameManager::loadState() {
     if (!mRunning) {
         return false;
     }
-    bool ret = false;
-    pause();
-    std::fstream stateFile("state.sav", std::ios::binary | std::ios::in);
-    if (stateFile.is_open()) {
-        Serialize state(&stateFile);
-        int magic;
-        state >> magic;
-        if (magic != 0xFFEE) {
-            ret = false;
-        } else {
-            mConsole->load(state);
-            ret = true;
-        }
-    } else {
-        ret = false;
-    }
-    resume();
-    return ret;
+    LoadStateEvent event;
+    strcpy(event.fileName, "state.sav");
+    pushEvent(event);
+    return true;
 }
 
 void GameManager::handleGameThread() {
-    std::lock_guard<std::mutex> lock(mConsoleMutex);
     auto lastTime = std::chrono::system_clock::now();
     auto frameLastTime = lastTime;
-    while (mRunning && !mPause) {
+
+    while (mRunning) {
         auto currentTime = std::chrono::system_clock::now();
         auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastTime).count();
         auto frameDeltaTime =
             std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - frameLastTime).count();
         lastTime = currentTime;
 
-        mConsole->stepSeconds(deltaTime / 1000.0f);
-
-        KeyAction *action = nullptr;
-        mActionQueueMutex.lock();
-        if (!mActionQueue.empty()) {
-            action = mActionQueue.front();
-            mActionQueue.pop();
+        if (haveEvent()) {
+            Event e = popEvent();
+            if (e != nullptr) {
+                if (e.getType() == Event::Type::KeyEvent) {
+                    processKeyEvent(e);
+                } else if (e.getType() == Event::Type::SaveStateEvent) {
+                    processSaveStateEvent(e);
+                } else if (e.getType() == Event::Type::LoadStateEvent) {
+                    processLoadStateEvent(e);
+                } else if (e.getType() == Event::Type::GameStateEvent) {
+                    processGameStateEvent(e);
+                }
+            }
         }
-        mActionQueueMutex.unlock();
-        if (action != nullptr) {
-            processKeyAction(action);
-            mKeyActionPool.free(action);
+        if (!mPause) {
+            mConsole->stepSeconds(deltaTime / 1000.0f);
         }
 
         if (frameDeltaTime >= 1000 / 60) {
@@ -173,6 +153,46 @@ void GameManager::handleGameThread() {
     }
 }
 
-void GameManager::processKeyAction(KeyAction *action) {
-    mConsole->setPressed(action->player, action->button, action->pressed);
+void GameManager::processKeyEvent(const KeyEvent &event) {
+    mConsole->setPressed(event.player, event.button, event.pressed);
+}
+
+void GameManager::processSaveStateEvent(const SaveStateEvent &event) {
+    std::ofstream stateFile(event.fileName, std::ios::binary | std::ios::out);
+    if (stateFile.is_open()) {
+        Serialize serialize;
+        mConsole->save(serialize);
+        serialize.writeToStream(stateFile);
+    }
+}
+
+void GameManager::processLoadStateEvent(const LoadStateEvent &event) {
+    std::ifstream stateFile(event.fileName, std::ios::binary | std::ios::in);
+    if (stateFile.is_open()) {
+        Serialize serialize;
+        serialize.readFromStream(stateFile);
+        mConsole->load(serialize);
+    }
+}
+
+void GameManager::processGameStateEvent(const GameStateEvent &event) {
+    mRunning = event.running;
+    mPause = event.pause;
+}
+
+void GameManager::pushEvent(const Event &event) {
+    std::lock_guard<std::mutex> lock(mEventQueueMutex);
+    mEventQueue.push(event);
+}
+
+Event GameManager::popEvent() {
+    std::lock_guard<std::mutex> lock(mEventQueueMutex);
+    Event event = mEventQueue.front();
+    mEventQueue.pop();
+    return event;
+}
+
+bool GameManager::haveEvent() {
+    std::lock_guard<std::mutex> lock(mEventQueueMutex);
+    return !mEventQueue.empty();
 }

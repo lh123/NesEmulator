@@ -6,7 +6,7 @@
 #include <cstdio>
 
 static const uint8_t lengthTable[32] = {
-    10, 254, 20, 2,  40, 4,  80, 6,  161, 8,  60, 10, 14, 12, 26, 14, //
+    10, 254, 20, 2,  40, 4,  80, 6,  160, 8,  60, 10, 14, 12, 26, 14, //
     12, 16,  24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30  //
 };
 
@@ -454,7 +454,7 @@ void Pulse::reset() {
 void Pulse::writeControl(uint8_t value) {
     dutyCycle = (value >> 6) & 0x3;
     lengthCounterHalt = ((value >> 5) & 0x1) == 0x1;
-    envelopeLoop = ((value >> 5) & 0x1) == 0x1;
+    envelopeLoop = lengthCounterHalt;
     envelopeEnabled = ((value >> 4) & 0x1) == 0;
     constantVolume = value & 0xF;
     envelopeDividerPeriod = value & 0xF;
@@ -547,8 +547,7 @@ void Pulse::stepSweep() {
     if (sweepDividerCounter > 0) {
         sweepDividerCounter--;
     } else {
-        if (sweepEnabled) {
-            // adjusted
+        if (sweepEnabled && sweepShift != 0) {
             timerPeriod = targetPeriod;
         }
         sweepDividerCounter = sweepDividerPeriod;

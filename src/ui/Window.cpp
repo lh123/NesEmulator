@@ -275,6 +275,12 @@ void Window::renderGUI() {
             if (ImGui::MenuItem("Load", "Ctrl + L", false, !mGameManager->isStop())) {
                 mGameManager->loadState();
             }
+            if (ImGui::MenuItem("Pause", nullptr, false, !mGameManager->isStop() && !mGameManager->isPause())) {
+                mGameManager->pause();
+            }
+            if (ImGui::MenuItem("Resume", nullptr, false, !mGameManager->isStop() && mGameManager->isPause())) {
+                mGameManager->resume();
+            }
             ImGui::EndMenu();
         }
 

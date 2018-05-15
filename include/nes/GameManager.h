@@ -1,20 +1,14 @@
 #ifndef GAME_MANAGER_H
 #define GAME_MANAGER_H
 
+#include "nes/Console.h"
+#include "nes/Event.h"
+
 #include <string>
 #include <functional>
-#include "nes/Console.h"
 #include <mutex>
 #include <queue>
 #include <iostream>
-
-#include "nes/Pool.hpp"
-
-struct KeyAction {
-    int player;
-    Button button;
-    bool pressed;
-};
 
 class GameManager {
 public:
@@ -33,7 +27,7 @@ public:
 
     void setKeyPressed(int player, Button key, bool pressed);
 
-    void setOnFrameListener(FrameListener listener);
+    void setOnFrameListener(const FrameListener &listener);
 
     void setOpenAudio(bool open);
 
@@ -43,9 +37,16 @@ public:
     bool loadState();
 
 private:
+    void pushEvent(const Event &event);
+    Event popEvent();
+    bool haveEvent();
+
     void handleGameThread();
 
-    void processKeyAction(KeyAction *action);
+    void processKeyEvent(const KeyEvent &event);
+    void processSaveStateEvent(const SaveStateEvent &event);
+    void processLoadStateEvent(const LoadStateEvent &event);
+    void processGameStateEvent(const GameStateEvent &event);
 
 private:
     std::string mGameName;
@@ -56,11 +57,8 @@ private:
     bool mRunning;
     bool mPause;
 
-    std::mutex mConsoleMutex;
-    std::mutex mActionQueueMutex;
-    std::queue<KeyAction *> mActionQueue;
-
-    Pool<KeyAction> mKeyActionPool;
+    std::mutex mEventQueueMutex;
+    std::queue<Event> mEventQueue;
 
     bool mPlayOneKeyBuffer[8];
     bool mPlayTwoKeyBuffer[8];
