@@ -8,6 +8,7 @@ AudioBuffer::AudioBuffer(int maxSize) : mReadIndex(0), mWriteIndex(0), mDataCoun
 AudioBuffer::~AudioBuffer() { delete[] mAudioBuffer; }
 
 void AudioBuffer::push(float data) {
+    std::lock_guard<std::mutex> lock(mMutex);
     if (mDataCount < mMaxSize) {
         mAudioBuffer[mWriteIndex] = data;
         mWriteIndex++;
@@ -19,6 +20,7 @@ void AudioBuffer::push(float data) {
 }
 
 int AudioBuffer::pop(float *buffer, int maxCount) {
+    std::lock_guard<std::mutex> lock(mMutex);
     int popCount = maxCount > mDataCount ? mDataCount : maxCount;
     mDataCount -= popCount;
 

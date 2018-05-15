@@ -6,7 +6,7 @@
 #include <cstdio>
 
 static const uint8_t lengthTable[32] = {
-    10, 254, 20, 2,  40, 4,  80, 6,  160, 8,  60, 10, 14, 12, 26, 14, //
+    10, 254, 20, 2,  40, 4,  80, 6,  161, 8,  60, 10, 14, 12, 26, 14, //
     12, 16,  24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30  //
 };
 
@@ -43,8 +43,8 @@ static void initTable() {
 }
 
 APU::APU(Console *console)
-    : console(console), sampleCounter(0), cycle(0), framePeriod(0), frameCounter(0), frameIRQDisable(false),
-      frameIRQFlag(false), sampleValue(0) {
+    : console(console), sampleCounter(0), framePeriod(0), frameCounter(0), newFrame(true), frameIRQDisable(false),
+      frameIRQFlag(false) {
     initTable();
     pulse1 = new Pulse(1);
     pulse2 = new Pulse(2);
@@ -72,26 +72,36 @@ APU::~APU() {
 }
 
 void APU::reset() {
-    writeRegister(0x4017, 0);
-    writeRegister(0x4015, 0);
-    for (uint16_t address = 0x4000; address <= 0x400F; address++) {
-        writeRegister(address, 0);
-    }
-    noise->shiftRegister = 0x1;
-    dmc->outputLevel = 0;
-    dmc->addressCounter = 0xC000;
+    framePeriod = 0;
+    frameCounter = 0;
+    newFrame = true;
+    frameIRQDisable = false;
+    frameIRQFlag = false;
+
+    pulse1->reset();
+    pulse2->reset();
+    triangle->reset();
+    noise->reset();
+    dmc->reset();
 }
 
 // call peer cpu cycle
 void APU::step() {
+    if (newFrame) {
+        newFrame = false;
+        frameCounter = 0;
+    } else {
+        frameCounter++;
+    }
+
+    // std::cout << "frame:" << frameCounter / 2.0f << '\n';
     stepTimer();
-    fireIRQ();
-    cycle++;
     if (framePeriod == 4) {
         stepFourStepFrame();
     } else {
         stepFiveStepFrame();
     }
+    fireIRQ();
     sampleCounter++;
     if (sampleCounter == CPU::CPU_FREQUENCY / SAMPLE_RATE) {
         sendSample();
@@ -100,17 +110,15 @@ void APU::step() {
 }
 
 void APU::sendSample() {
-    sampleValue = output();
+    auto value = output();
     for (auto *filter : filterChain) {
-        float temp = filter->step(sampleValue);
-        sampleValue = temp;
+        float temp = filter->step(value);
+        value = temp;
     }
-    audio->push(sampleValue);
+    audio->push(value);
 }
 
 AudioBuffer *APU::getAudioBuffer() const { return audio; }
-
-float APU::sample() const { return sampleValue; }
 
 float APU::output() {
     uint8_t p1 = pulse1->output();
@@ -125,38 +133,37 @@ float APU::output() {
 }
 
 void APU::stepFourStepFrame() {
-    if (cycle == 3728.5 * 2) {
+    if (frameCounter == MODE0_STEP_1) {
         stepQuarterFrame();
-    } else if (cycle == 7456.5 * 2) {
-        stepQuarterFrame();
-        stepHalfFrame();
-    } else if (cycle == 11185.5 * 2) {
-        stepQuarterFrame();
-    } else if (cycle == 14914 * 2) {
-        setIRQFlag();
-    } else if (cycle == 14914.5 * 2) {
+    } else if (frameCounter == MODE0_STEP_2) {
         stepQuarterFrame();
         stepHalfFrame();
+    } else if (frameCounter == MODE0_STEP_3) {
+        stepQuarterFrame();
+    } else if (frameCounter == MODE0_STEP_4) {
         setIRQFlag();
-    } else if (cycle == 14915 * 2) {
-        cycle = 0;
+    } else if (frameCounter == MODE0_STEP_4_1) {
+        stepQuarterFrame();
+        stepHalfFrame();
         setIRQFlag();
+        newFrame = true;
     }
 }
 
 void APU::stepFiveStepFrame() {
-    if (cycle == 3728.5 * 2) {
+    if (frameCounter == MODE1_STEP_1) {
         stepQuarterFrame();
-    } else if (cycle == 7456.5 * 2) {
-        stepQuarterFrame();
-        stepHalfFrame();
-    } else if (cycle == 11185.5 * 2) {
-        stepQuarterFrame();
-    } else if (cycle == 18640.5 * 2) {
+    } else if (frameCounter == MODE1_STEP_2) {
         stepQuarterFrame();
         stepHalfFrame();
-    } else if (cycle == 18641 * 2) {
-        cycle = 0;
+    } else if (frameCounter == MODE1_STEP_3) {
+        stepQuarterFrame();
+    } else if (frameCounter == MODE1_STEP_4) {
+        // do nothing
+    } else if (frameCounter == MODE1_STEP_5) {
+        stepQuarterFrame();
+        stepHalfFrame();
+        newFrame = true;
     }
 }
 
@@ -171,7 +178,7 @@ void APU::stepHalfFrame() {
 }
 
 void APU::stepTimer() {
-    if (cycle % 1 == 0) {
+    if (frameCounter % 2 == 1) {
         pulse1->stepTimer();
         pulse2->stepTimer();
         noise->stepTimer();
@@ -365,7 +372,7 @@ void APU::writeFrameCounter(uint8_t value) {
     framePeriod = 4 + ((value >> 7) & 0x1);
     frameIRQFlag = false;
     frameIRQDisable = ((value >> 6) & 0x1) == 1;
-
+    newFrame = true;
     // 5-step mode has extra step
     if (framePeriod == 5) {
         stepQuarterFrame();
@@ -374,11 +381,10 @@ void APU::writeFrameCounter(uint8_t value) {
 }
 
 void APU::save(Serialize &serialize) {
-    // serialize << sampleRate;
-    // serialize << sampleCounter
-    serialize << cycle;
+    serialize << sampleCounter;
     serialize << framePeriod;
     serialize << frameCounter;
+    serialize << newFrame;
     serialize << frameIRQDisable;
     serialize << frameIRQFlag;
     pulse1->save(serialize);
@@ -389,9 +395,10 @@ void APU::save(Serialize &serialize) {
 }
 
 void APU::load(Serialize &serialize) {
-    serialize >> cycle;
+    serialize >> sampleCounter;
     serialize >> framePeriod;
     serialize >> frameCounter;
+    serialize >> newFrame;
     serialize >> frameIRQDisable;
     serialize >> frameIRQFlag;
     pulse1->load(serialize);
@@ -409,6 +416,30 @@ Pulse::Pulse(uint8_t channel)
       sweepDividerCounter(0) {}
 
 Pulse::~Pulse() {}
+
+void Pulse::reset() {
+    enabled = false;
+    dutyCycle = 0;
+    sequenceStep = 0;
+    lengthCounterHalt = false;
+    lengthCounter = 0;
+    envelopeEnabled = false;
+    envelopeLoop = false;
+    envelopeStart = false;
+    envelopeDividerPeriod = 0;
+    envelopeDividerCounter = 0;
+    envelopeDecayCounter = 0;
+    constantVolume = 0;
+    timerPeriod = 0;
+    timerCounter = 0;
+    targetPeriod = 0;
+    sweepEnabled = false;
+    sweepReload = false;
+    sweepNegate = false;
+    sweepShift = 0;
+    sweepDividerPeriod = 0;
+    sweepDividerCounter = 0;
+}
 
 /**
  * $4000/$4004
@@ -549,9 +580,6 @@ void Pulse::calculationTargetPeriod() {
 }
 
 uint8_t Pulse::output() {
-    if (!enabled) {
-        return 0;
-    }
     if (lengthCounter == 0) {
         return 0;
     }
@@ -570,7 +598,6 @@ uint8_t Pulse::output() {
 
 void Pulse::save(Serialize &serialize) {
     serialize << enabled;
-    serialize << channel;
     serialize << dutyCycle;
     serialize << sequenceStep;
     serialize << lengthCounterHalt;
@@ -595,7 +622,6 @@ void Pulse::save(Serialize &serialize) {
 
 void Pulse::load(Serialize &serialize) {
     serialize >> enabled;
-    serialize >> channel;
     serialize >> dutyCycle;
     serialize >> sequenceStep;
     serialize >> lengthCounterHalt;
@@ -624,6 +650,19 @@ Triangle::Triangle()
 
 Triangle::~Triangle() {}
 
+void Triangle::reset() {
+    enabled = false;
+    lengthCounterHalt = false;
+    control = false;
+    lengthCounter = 0;
+    timerPeriod = 0;
+    timerCounter = 0;
+    linearCounterReloadValue = 0;
+    linearCounter = 0;
+    linearCounterReload = false;
+    sequencesStep = 0;
+}
+
 /**
  * $4008
  * CRRR RRRR
@@ -650,7 +689,9 @@ void Triangle::writeTimerLow(uint8_t value) { timerPeriod = (timerPeriod & 0xFF0
  * Sets the linear counter reload flag
  */
 void Triangle::writeTimerHigh(uint8_t value) {
-    lengthCounter = lengthTable[value >> 3];
+    if (enabled) {
+        lengthCounter = lengthTable[value >> 3];
+    }
     timerPeriod = (timerPeriod & 0x00FF) | (uint16_t(value & 0x7) << 8);
     // timerCounter = timerPeriod;
     linearCounterReload = true;
@@ -671,7 +712,7 @@ void Triangle::stepTimer() {
 }
 
 void Triangle::stepLength() {
-    if (!lengthCounterHalt && lengthCounter > 0) {
+    if (enabled && !lengthCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -691,12 +732,8 @@ void Triangle::stepLinearCounter() {
     }
 }
 
-uint8_t Triangle::output() {
-    if (!enabled) {
-        return 0;
-    }
-    return triangleTable[sequencesStep];
-}
+// this includes the linear counter for the triangle channel
+uint8_t Triangle::output() { return triangleTable[sequencesStep]; }
 
 void Triangle::save(Serialize &serialize) {
     serialize << enabled;
@@ -731,6 +768,24 @@ Noise::Noise()
       envelopeDividerCounter(0), envelopeDecayCounter(0), constantVolume(0), envelopeOutputVolume(0) {}
 
 Noise::~Noise() {}
+
+void Noise::reset() {
+    enabled = false;
+    mode = false;
+    shiftRegister = 1;
+    lenghtCounterHalt = false;
+    lengthCounter = 0;
+    timerPeriod = 0;
+    timerCounter = 0;
+    envelopeEnabled = false;
+    envelopeLoop = false;
+    envelopeStart = false;
+    envelopeDividerPeriod = 0;
+    envelopeDividerCounter = 0;
+    envelopeDecayCounter = 0;
+    constantVolume = 0;
+    envelopeOutputVolume = 0;
+}
 
 /**
  * $400C
@@ -820,7 +875,7 @@ void Noise::stepEnvelope() {
 }
 
 void Noise::stepLength() {
-    if (!lenghtCounterHalt && lengthCounter > 0) {
+    if (enabled && !lenghtCounterHalt && lengthCounter > 0) {
         lengthCounter--;
     }
 }
@@ -828,9 +883,6 @@ void Noise::stepLength() {
 // Bit 0 of the shift register is set, or
 // The length counter is zero
 uint8_t Noise::output() {
-    if (!enabled) {
-        return 0;
-    }
     if ((shiftRegister & 0x1) == 0x1) {
         return 0;
     }
@@ -887,6 +939,27 @@ DMC::DMC(CPU *cpu)
       cpu(cpu) {}
 
 DMC::~DMC() {}
+
+void DMC::reset() {
+    enabled = false;
+    loop = false;
+    irqEnable = false;
+    interrupt = false;
+    rateIndex = 0;
+    sampleAddress = 0;
+    sampleLength = 0;
+    sampleBuffer = 0;
+    sampleBufferBitCount = 0;
+    addressCounter = 0xC000;
+    bytesRemainingCounter = 0;
+    timerPeriod = 0;
+    timerCounter = 0;
+    shiftRegister = 0;
+    bitsRemainingCounter = 0;
+    outputLevel = 0;
+    silence = false;
+    outputCycleEnd = false;
+}
 
 /**
  * $4010
@@ -959,6 +1032,9 @@ void DMC::stepTimer() {
     } else {
         timerCounter--;
     }
+    if (interrupt) {
+        cpu->triggerIRQ();
+    }
 }
 
 // clock every cycle
@@ -983,17 +1059,9 @@ void DMC::stepReader() {
             }
         }
     }
-    if (interrupt) {
-        cpu->triggerIRQ();
-    }
 }
 
-uint8_t DMC::output() {
-    // if (!enabled) {
-    //     return 0;
-    // }
-    return outputLevel;
-}
+uint8_t DMC::output() { return outputLevel; }
 
 void DMC::save(Serialize &serialize) {
     serialize << enabled;

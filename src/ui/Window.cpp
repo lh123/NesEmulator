@@ -269,10 +269,10 @@ void Window::renderGUI() {
         }
 
         if (ImGui::BeginMenu("Game")) {
-            if (ImGui::MenuItem("Save")) {
+            if (ImGui::MenuItem("Save", "Ctrl + S", false, !mGameManager->isStop())) {
                 mGameManager->saveState();
             }
-            if (ImGui::MenuItem("Load")) {
+            if (ImGui::MenuItem("Load", "Ctrl + L", false, !mGameManager->isStop())) {
                 mGameManager->loadState();
             }
             ImGui::EndMenu();
@@ -306,6 +306,14 @@ void Window::renderGUI() {
     if (mKeyMapView->isShow()) {
         mKeyMapView->render();
     }
+
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.KeyCtrl && ImGui::IsKeyPressed(GLFW_KEY_S)) {
+        mGameManager->saveState();
+    } else if (io.KeyCtrl && ImGui::IsKeyPressed(GLFW_KEY_L)) {
+        mGameManager->loadState();
+    }
+
     ImGui::Render();
 
     ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());

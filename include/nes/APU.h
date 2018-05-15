@@ -19,6 +19,18 @@ class APU {
 public:
     static constexpr int SAMPLE_RATE = 44100;
 
+    static constexpr int MODE0_STEP_1 = 3728.5 * 2;
+    static constexpr int MODE0_STEP_2 = 7456.5 * 2;
+    static constexpr int MODE0_STEP_3 = 11185.5 * 2;
+    static constexpr int MODE0_STEP_4 = 14914 * 2;
+    static constexpr int MODE0_STEP_4_1 = 14914.5 * 2;
+
+    static constexpr int MODE1_STEP_1 = 3728.5 * 2;
+    static constexpr int MODE1_STEP_2 = 7456.5 * 2;
+    static constexpr int MODE1_STEP_3 = 11185.5 * 2;
+    static constexpr int MODE1_STEP_4 = 14914.5 * 2;
+    static constexpr int MODE1_STEP_5 = 18640.5 * 2;
+
     APU(Console *console);
     ~APU();
 
@@ -29,13 +41,11 @@ public:
 
     AudioBuffer *getAudioBuffer() const;
 
-    float sample() const;
-
     void save(Serialize &serialize);
     void load(Serialize &serialize);
 
 private:
-    float output();    
+    float output();
     void sendSample();
 
     void stepFourStepFrame();
@@ -59,7 +69,6 @@ private:
     Console *console;
     AudioBuffer *audio;
     uint32_t sampleCounter;
-    uint64_t cycle;
 
     Pulse *pulse1;      // $4000-$4003
     Pulse *pulse2;      // $4004-$4007
@@ -68,18 +77,21 @@ private:
     DMC *dmc;           // $4010-$4013
 
     uint8_t framePeriod; // step mode (4 or 5)
-    uint8_t frameCounter;
+    uint16_t frameCounter;
+    bool newFrame;
+
     bool frameIRQDisable;
     bool frameIRQFlag;
 
     Filter *filterChain[3];
-    float sampleValue;
 };
 
 class Pulse {
 public:
     Pulse(uint8_t channel);
     ~Pulse();
+
+    void reset();
 
     void writeControl(uint8_t value);
     void writeSweep(uint8_t value);
@@ -100,7 +112,7 @@ public:
 
 public:
     bool enabled;
-    uint8_t channel;
+    const uint8_t channel;
 
     uint8_t dutyCycle;
     uint8_t sequenceStep; // Sequence step value
@@ -133,6 +145,7 @@ public:
     Triangle();
     ~Triangle();
 
+    void reset();
     void writeControl(uint8_t value);
     void writeTimerLow(uint8_t value);
     void writeTimerHigh(uint8_t value);
@@ -167,6 +180,7 @@ public:
     Noise();
     ~Noise();
 
+    void reset();
     void writeControl(uint8_t value);
     void writePeriod(uint8_t value);
     void writeLength(uint8_t value);
@@ -208,6 +222,7 @@ public:
     DMC(CPU *cpu);
     ~DMC();
 
+    void reset();
     void writeControl(uint8_t value);
     void writeDirectLoad(uint8_t value);
     void writeAddress(uint8_t value);

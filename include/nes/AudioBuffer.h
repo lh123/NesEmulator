@@ -2,6 +2,7 @@
 #define AUDIO_BUFFER_H
 
 #include <cstdint>
+#include <mutex>
 
 class AudioBuffer {
 public:
@@ -23,6 +24,8 @@ private:
 
     int mDataCount;
     int mMaxSize;
+    
+    std::mutex mMutex;
 };
 
 #endif
