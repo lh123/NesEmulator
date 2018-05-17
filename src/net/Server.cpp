@@ -175,14 +175,21 @@ void Server::handleAcceptThread() {
 
 void Server::handleClientThread(Client *client) {
     PacketHead packetHeadBuffer;
-    char *buffer = new char[BUFFER_SIZE];
+    size_t bufferSize = BUFFER_SIZE;
+    char *buffer = new char[bufferSize];
     while (client->running && mRunning) {
         if (recvDataInternal(client->socket, reinterpret_cast<char *>(&packetHeadBuffer), sizeof(PacketHead))) {
             if (packetHeadBuffer.magic == PacketHead::MAGIC) {
                 sendDataToOther(client->id, reinterpret_cast<char *>(&packetHeadBuffer), sizeof(PacketHead));
-                if (packetHeadBuffer.size > BUFFER_SIZE) {
+                if (packetHeadBuffer.size > bufferSize) {
+                    size_t oldSize = bufferSize;
+                    size_t newSize = oldSize;
+                    while (newSize < packetHeadBuffer.size) {
+                        newSize *= 2;
+                    }
                     delete[] buffer;
-                    buffer = new char[packetHeadBuffer.size];
+                    buffer = new char[newSize];
+                    bufferSize = newSize;
                 }
                 if (recvDataInternal(client->socket, buffer, packetHeadBuffer.size)) {
                     sendDataToOther(client->id, buffer, packetHeadBuffer.size);

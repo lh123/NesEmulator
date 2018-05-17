@@ -9,36 +9,33 @@ struct KeyEvent {
     bool pressed;
 };
 
-struct SaveStateEvent {
-    char fileName[100];
-};
+struct SaveStateEvent {};
 
-struct LoadStateEvent {
-    char fileName[100];
-};
+struct LoadStateEvent {};
 
-struct GameStateEvent {
+struct GameRunStateEvent {
     bool pause;
     bool running;
 };
 
 class Event {
 public:
-    enum class Type { KeyEvent, SaveStateEvent, LoadStateEvent, GameStateEvent };
+    enum class Type { Null, KeyEvent, SaveStateEvent, LoadStateEvent, GameRunStateEvent };
+
     Event();
     Event(const KeyEvent &event);
     Event(const SaveStateEvent &event);
     Event(const LoadStateEvent &event);
-    Event(const GameStateEvent &event);
+    Event(const GameRunStateEvent &event);
 
     Event &operator=(const Event &other);
 
-    operator KeyEvent();
-    operator SaveStateEvent();
-    operator LoadStateEvent();
-    operator GameStateEvent();
+    explicit operator KeyEvent &();
+    explicit operator SaveStateEvent &();
+    explicit operator LoadStateEvent &();
+    explicit operator GameRunStateEvent &();
 
-    Type getType() const;
+    const Type &getType() const;
 
     bool operator==(std::nullptr_t null) const;
     bool operator!=(std::nullptr_t null) const;
@@ -49,11 +46,10 @@ private:
         KeyEvent key;
         SaveStateEvent save;
         LoadStateEvent load;
-        GameStateEvent state;
+        GameRunStateEvent state;
     };
 
 private:
-    bool mIsNull;
     Type mType;
     Data mData;
 };

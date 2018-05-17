@@ -1,6 +1,7 @@
 #include "ui/Window.h"
 
 #include <iostream>
+#include <fstream>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw_gl3.h>
 
@@ -270,10 +271,10 @@ void Window::renderGUI() {
 
         if (ImGui::BeginMenu("Game")) {
             if (ImGui::MenuItem("Save", "Ctrl + S", false, !mGameManager->isStop())) {
-                mGameManager->saveState();
+                saveState();
             }
             if (ImGui::MenuItem("Load", "Ctrl + L", false, !mGameManager->isStop())) {
-                mGameManager->loadState();
+                loadState();
             }
             if (ImGui::MenuItem("Pause", nullptr, false, !mGameManager->isStop() && !mGameManager->isPause())) {
                 mGameManager->pause();
@@ -315,9 +316,9 @@ void Window::renderGUI() {
 
     ImGuiIO &io = ImGui::GetIO();
     if (io.KeyCtrl && ImGui::IsKeyPressed(GLFW_KEY_S)) {
-        mGameManager->saveState();
+        saveState();
     } else if (io.KeyCtrl && ImGui::IsKeyPressed(GLFW_KEY_L)) {
-        mGameManager->loadState();
+        loadState();
     }
 
     ImGui::Render();
@@ -355,15 +356,14 @@ void Window::renderGameFrame() {
     ImGui::SetNextWindowPos(ImVec2(0, 20));
     ImGui::SetNextWindowSize(ImVec2(WIDTH * SCALE, HEIGHT * SCALE - 20));
     ImGui::Begin("##GameView", nullptr,
-                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBringToFrontOnFocus);
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                     ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     if (!mGameManager->isStop() || (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Client)) {
         readKeys();
         std::lock_guard<std::mutex> lock(mFrameBufferMutex);
         glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE,
-                     mFrameBuffer.pixel());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mFrameBuffer.pixel());
         ImGui::Image(reinterpret_cast<void *>(mFrameTexture), ImGui::GetContentRegionAvail());
         if (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Host) {
             mGameProxy->sendFrameInfoToServer(&mFrameBuffer);
@@ -409,5 +409,24 @@ void Window::readKeyConfig(Button btn, int *keyCode, int defaultKeyCode) {
         *keyCode = temp;
     } else {
         *keyCode = defaultKeyCode;
+    }
+}
+
+void Window::saveState() {
+    mGameManager->saveState([this](const Serialize &state) {
+        mGameState = state;
+        std::ofstream stateFile("state.sav", std::ios::out | std::ios::binary);
+        if (stateFile.is_open()) {
+            mGameState.writeToStream(stateFile);
+        }
+    });
+}
+
+void Window::loadState() {
+    std::ifstream stateFile("state.sav", std::ios::in | std::ios::binary);
+    if (stateFile.is_open()) {
+        mGameState.clear();
+        mGameState.readFromStream(stateFile);
+        mGameManager->loadState(mGameState);
     }
 }

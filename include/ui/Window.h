@@ -5,6 +5,9 @@
 #include <GLFW/glfw3.h>
 #include <mutex>
 
+#include "nes/Serialize.hpp"
+#include "nes/GameManager.h"
+
 #include "ui/Audio.h"
 #include "ui/CreateServerView.h"
 #include "ui/JoinServerView.h"
@@ -12,9 +15,7 @@
 #include "ui/ID.h"
 #include "ui/Config.h"
 
-#include "nes/GameManager.h"
 #include "net/GameProxy.h"
-
 
 enum class GameType { Local, Host, Client };
 
@@ -59,6 +60,9 @@ private:
     void readAllKeyConfig();
     void readKeyConfig(Button btn, int *keyCode, int defaultKeyCode);
 
+    void saveState();
+    void loadState();
+
 private:
     GLFWwindow *mWindow;
     Audio *mAudio;
@@ -81,6 +85,8 @@ private:
 
     bool mOpenAudio;
     bool mAudioInit;
+
+    Serialize mGameState;
 };
 
 #endif

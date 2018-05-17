@@ -2,8 +2,7 @@
 #include <iostream>
 #include <cstring>
 
-Client::Client()
-    : mShouldDisconnect(false), mIsConnect(false), mDataRecvListener(nullptr), mClienConnectListener(nullptr) {}
+Client::Client() : mShouldDisconnect(false), mIsConnect(false), mDataRecvListener(nullptr), mClienConnectListener(nullptr) {}
 
 Client::~Client() {}
 
@@ -110,7 +109,8 @@ bool Client::isConnect() const { return mIsConnect; }
 
 void Client::run() {
     PacketHead head;
-    char *buffer = new char[BUFFER_SIZE];
+    size_t bufferSize = BUFFER_SIZE;
+    char *buffer = new char[bufferSize];
     while (!mShouldDisconnect) {
         if (recvDataInternal(reinterpret_cast<char *>(&head), sizeof(PacketHead))) {
             if (head.magic == PacketHead::MAGIC) {
@@ -131,9 +131,15 @@ void Client::run() {
                         disconnect();
                     }
                 } else if (head.type == PacketType::Data) {
-                    if (head.size > BUFFER_SIZE) {
+                    if (head.size > bufferSize) {
+                        size_t oldSize = bufferSize;
+                        size_t newSize = oldSize;
+                        while (newSize < head.size) {
+                            newSize *= 2;
+                        }
                         delete[] buffer;
-                        buffer = new char[head.size];
+                        buffer = new char[newSize];
+                        bufferSize = newSize;
                     }
                     if (recvDataInternal(buffer, head.size)) {
                         if (mDataRecvListener != nullptr) {

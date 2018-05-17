@@ -3,6 +3,7 @@
 
 #include "nes/Console.h"
 #include "nes/Event.h"
+#include "nes/Serialize.hpp"
 
 #include <string>
 #include <functional>
@@ -13,6 +14,7 @@
 class GameManager {
 public:
     using FrameListener = std::function<void(const Frame *)>;
+    using SaveStateCallBack = std::function<void(const Serialize &)>;
 
     GameManager();
     ~GameManager();
@@ -33,8 +35,8 @@ public:
 
     AudioBuffer *getAudioBuffer() const;
 
-    bool saveState();
-    bool loadState();
+    void saveState(const SaveStateCallBack &callback);
+    void loadState(const Serialize &state);
 
 private:
     void pushEvent(const Event &event);
@@ -43,15 +45,17 @@ private:
 
     void handleGameThread();
 
+    void dispatchEvent();
     void processKeyEvent(const KeyEvent &event);
     void processSaveStateEvent(const SaveStateEvent &event);
     void processLoadStateEvent(const LoadStateEvent &event);
-    void processGameStateEvent(const GameStateEvent &event);
+    void processGameRunStateEvent(const GameRunStateEvent &event);
 
 private:
     std::string mGameName;
 
     FrameListener mFrameListener;
+    SaveStateCallBack mSaveStateCallBack;
 
     Console *mConsole;
     bool mRunning;
@@ -62,6 +66,9 @@ private:
 
     bool mPlayOneKeyBuffer[8];
     bool mPlayTwoKeyBuffer[8];
+
+    Serialize mSyncStateBuffer;
+    std::mutex mSyncStateMutex;
 };
 
 #endif

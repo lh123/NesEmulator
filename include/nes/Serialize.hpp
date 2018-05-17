@@ -1,5 +1,5 @@
-#ifndef SERIALIZE_H
-#define SERIALIZE_H
+#ifndef SERIALIZE_HPP
+#define SERIALIZE_HPP
 
 #include <string>
 #include <cstdint>
@@ -11,6 +11,9 @@ public:
     static constexpr int DEFAULT_SIZE = 1024;
 
     Serialize();
+    Serialize(const Serialize &other);
+    Serialize(Serialize &&other);
+
     ~Serialize();
 
     template <class T>
@@ -31,14 +34,22 @@ public:
     template <class T>
     Serialize &operator>>(T &value);
 
-    void writeToStream(std::ostream &stream);
+    Serialize &operator=(const Serialize &other);
+    Serialize &operator=(Serialize &&other);
 
+    void writeToStream(std::ostream &stream);
     void readFromStream(std::istream &stream);
+
+    void readFromMemory(const char *buffer, size_t size);
+    bool writeToMemory(char *buffer, size_t size);
 
     std::pair<const char *, size_t> getData() const;
 
     size_t size() const;
+    size_t totalSize() const;
     size_t capacity() const;
+
+    void clear();
 
 private:
     void checkSize(size_t writeSize);

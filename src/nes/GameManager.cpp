@@ -27,7 +27,7 @@ bool GameManager::startGame(std::string path) {
 
 void GameManager::pause() {
     if (!mPause && mRunning) {
-        GameStateEvent event;
+        GameRunStateEvent event;
         event.pause = true;
         event.running = mRunning;
         pushEvent(event);
@@ -36,7 +36,7 @@ void GameManager::pause() {
 
 void GameManager::resume() {
     if (mPause && mRunning) {
-        GameStateEvent event;
+        GameRunStateEvent event;
         event.pause = false;
         event.running = mRunning;
         pushEvent(event);
@@ -45,7 +45,7 @@ void GameManager::resume() {
 
 void GameManager::stop() {
     if (mRunning) {
-        GameStateEvent event;
+        GameRunStateEvent event;
         event.pause = mPause;
         event.running = false;
         pushEvent(event);
@@ -92,24 +92,19 @@ AudioBuffer *GameManager::getAudioBuffer() const {
     }
 }
 
-bool GameManager::saveState() {
-    if (!mRunning) {
-        return false;
+void GameManager::saveState(const SaveStateCallBack &callback) {
+    if (mSaveStateCallBack == nullptr) {
+        mSaveStateCallBack = callback;
+        SaveStateEvent event;
+        pushEvent(event);
     }
-    SaveStateEvent event;
-    strcpy(event.fileName, "state.sav");
-    pushEvent(event);
-    return true;
 }
 
-bool GameManager::loadState() {
-    if (!mRunning) {
-        return false;
-    }
+void GameManager::loadState(const Serialize &state) {
+    std::lock_guard<std::mutex> lock(mSyncStateMutex);
+    mSyncStateBuffer = state;
     LoadStateEvent event;
-    strcpy(event.fileName, "state.sav");
     pushEvent(event);
-    return true;
 }
 
 void GameManager::handleGameThread() {
@@ -119,24 +114,11 @@ void GameManager::handleGameThread() {
     while (mRunning) {
         auto currentTime = std::chrono::system_clock::now();
         auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastTime).count();
-        auto frameDeltaTime =
-            std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - frameLastTime).count();
+        auto frameDeltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - frameLastTime).count();
         lastTime = currentTime;
 
-        if (haveEvent()) {
-            Event e = popEvent();
-            if (e != nullptr) {
-                if (e.getType() == Event::Type::KeyEvent) {
-                    processKeyEvent(e);
-                } else if (e.getType() == Event::Type::SaveStateEvent) {
-                    processSaveStateEvent(e);
-                } else if (e.getType() == Event::Type::LoadStateEvent) {
-                    processLoadStateEvent(e);
-                } else if (e.getType() == Event::Type::GameStateEvent) {
-                    processGameStateEvent(e);
-                }
-            }
-        }
+        dispatchEvent();
+
         if (!mPause) {
             mConsole->stepSeconds(deltaTime / 1000.0f);
         }
@@ -153,29 +135,47 @@ void GameManager::handleGameThread() {
     }
 }
 
-void GameManager::processKeyEvent(const KeyEvent &event) {
-    mConsole->setPressed(event.player, event.button, event.pressed);
+void GameManager::dispatchEvent() {
+    if (haveEvent()) {
+        Event e = popEvent();
+        if (e != nullptr) {
+            if (e.getType() == Event::Type::KeyEvent) {
+                processKeyEvent(static_cast<KeyEvent &>(e));
+            } else if (e.getType() == Event::Type::SaveStateEvent) {
+                processSaveStateEvent(static_cast<SaveStateEvent &>(e));
+            } else if (e.getType() == Event::Type::LoadStateEvent) {
+                processLoadStateEvent(static_cast<LoadStateEvent &>(e));
+            } else if (e.getType() == Event::Type::GameRunStateEvent) {
+                processGameRunStateEvent(static_cast<GameRunStateEvent &>(e));
+            }
+        }
+    }
 }
 
+void GameManager::processKeyEvent(const KeyEvent &event) { mConsole->setPressed(event.player, event.button, event.pressed); }
+
 void GameManager::processSaveStateEvent(const SaveStateEvent &event) {
-    std::ofstream stateFile(event.fileName, std::ios::binary | std::ios::out);
-    if (stateFile.is_open()) {
-        Serialize serialize;
-        mConsole->save(serialize);
-        serialize.writeToStream(stateFile);
+    std::lock_guard<std::mutex> lock(mSyncStateMutex);
+    mSyncStateBuffer.clear();
+    mSyncStateBuffer << 0xFFEE;
+    mConsole->save(mSyncStateBuffer);
+    if (mSaveStateCallBack != nullptr) {
+        mSaveStateCallBack(mSyncStateBuffer);
+        mSaveStateCallBack = nullptr;
     }
 }
 
 void GameManager::processLoadStateEvent(const LoadStateEvent &event) {
-    std::ifstream stateFile(event.fileName, std::ios::binary | std::ios::in);
-    if (stateFile.is_open()) {
-        Serialize serialize;
-        serialize.readFromStream(stateFile);
-        mConsole->load(serialize);
+    std::lock_guard<std::mutex> lock(mSyncStateMutex);
+    int magic;
+    mSyncStateBuffer >> magic;
+    if (magic == 0xFFEE) {
+        mConsole->load(mSyncStateBuffer);
     }
+    mSyncStateBuffer.clear();
 }
 
-void GameManager::processGameStateEvent(const GameStateEvent &event) {
+void GameManager::processGameRunStateEvent(const GameRunStateEvent &event) {
     mRunning = event.running;
     mPause = event.pause;
 }

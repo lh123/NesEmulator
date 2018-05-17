@@ -16,7 +16,7 @@ struct PacketHead {
     uint16_t magic;
     PacketType type;
 
-    int size;
+    size_t size;
 };
 
 struct ClientInfoPacket {
