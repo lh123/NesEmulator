@@ -8,111 +8,85 @@
 
 class Serialize {
 public:
-    static constexpr int DEFAULT_SIZE = 13 * 1024;
+    static constexpr int DEFAULT_SIZE = 1024;
 
-    Serialize() {
-        mSize = DEFAULT_SIZE;
-        mBuffer = new char[mSize];
-        mWriteSize = 0;
-        mReadSize = 0;
-    }
-
-    Serialize(char *buffer, int size) {
-        if (size <= DEFAULT_SIZE) {
-            mSize = DEFAULT_SIZE;
-        } else {
-            mSize = size;
-        }
-        mBuffer = new char[mSize];
-        memcpy(mBuffer, buffer, size);
-        mSize = size;
-        mWriteSize = size;
-        mReadSize = 0;
-    }
-
-    Serialize(Serialize &&other) {
-        mSize = other.mSize;
-        mWriteSize = other.mWriteSize;
-        mReadSize = other.mReadSize;
-        mBuffer = other.mBuffer;
-        other.mBuffer = nullptr;
-    }
-
-    ~Serialize() {
-        if (mBuffer != nullptr) {
-            delete[] mBuffer;
-        }
-    }
+    Serialize();
+    ~Serialize();
 
     template <class T>
-    void write(const T &value) {
-        int writeSize = sizeof(T);
-        checkSize(writeSize);
-        memcpy(mBuffer + mWriteSize, reinterpret_cast<const char *>(&value), writeSize);
-        mWriteSize += writeSize;
-    }
+    void write(const T &value);
 
     template <class T>
-    Serialize &operator<<(const T &value) {
-        write(value);
-        return *this;
-    }
+    void writeArray(const T *array, size_t count);
 
     template <class T>
-    void writeArray(const T *array, int size) {
-        checkSize(size);
-        memcpy(mBuffer + mWriteSize, reinterpret_cast<const char *>(array), size);
-        mWriteSize += size;
-    }
+    void read(T &value);
 
     template <class T>
-    void read(T &value) {
-        int readSize = sizeof(T);
-        memcpy(reinterpret_cast<char *>(&value), mBuffer + mReadSize, readSize);
-        mReadSize += readSize;
-    }
+    void readArray(T *array, size_t count);
 
     template <class T>
-    Serialize &operator>>(T &value) {
-        read(value);
-        return *this;
-    }
+    Serialize &operator<<(const T &value);
 
     template <class T>
-    void readArray(T *array, int size) {
-        memcpy(reinterpret_cast<char *>(array), mBuffer + mReadSize, size);
-        mReadSize += size;
-    }
+    Serialize &operator>>(T &value);
 
-    void writeToStream(std::ostream &stream) { stream.write(mBuffer, mWriteSize); }
+    void writeToStream(std::ostream &stream);
 
-    void readFromStream(std::istream &stream) {
-        stream.seekg(0, std::ios::end);
-        int size = stream.tellg();
-        stream.seekg(0, std::ios::beg);
-        checkSize(size);
-        stream.read(mBuffer, size);
-    }
+    void readFromStream(std::istream &stream);
 
-    std::pair<const char *, int> getData() const { return std::make_pair(mBuffer + mReadSize, mWriteSize - mReadSize); }
+    std::pair<const char *, size_t> getData() const;
+
+    size_t size() const;
+    size_t capacity() const;
 
 private:
-    void checkSize(int writeSize) {
-        if (mWriteSize + writeSize > mSize) {
-            int newSize = mSize * 2;
-            char *temp = new char[newSize];
-            memcpy(temp, mBuffer, mWriteSize);
-            delete[] mBuffer;
-            mBuffer = temp;
-            mSize = newSize;
-        }
-    }
+    void checkSize(size_t writeSize);
 
 private:
-    char *mBuffer;
-    int mWriteSize;
-    int mReadSize;
-    int mSize;
+    char *mWrite;
+    char *mRead;
+
+    char *mStart;
+    char *mEnd;
 };
+
+template <class T>
+void Serialize::write(const T &value) {
+    checkSize(sizeof(T));
+    memcpy(mWrite, &value, sizeof(T));
+    mWrite += sizeof(T);
+}
+
+template <class T>
+void Serialize::writeArray(const T *array, size_t count) {
+    checkSize(count * sizeof(T));
+    memcpy(mWrite, array, count * sizeof(T));
+    mWrite += count * sizeof(T);
+}
+
+template <class T>
+void Serialize::read(T &value) {
+    memcpy(&value, mRead, sizeof(T));
+    mRead += sizeof(T);
+}
+
+template <class T>
+void Serialize::readArray(T *array, size_t count) {
+    memcpy(array, mRead, count * sizeof(T));
+    mRead += count * sizeof(T);
+}
+
+template <class T>
+Serialize &Serialize::operator<<(const T &value) {
+    write(value);
+    return *this;
+}
+
+template <class T>
+Serialize &Serialize::operator>>(T &value) {
+    read(value);
+    return *this;
+}
 
 #endif
