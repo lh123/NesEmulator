@@ -5,9 +5,7 @@
 #include <chrono>
 #include <fstream>
 
-GameManager::GameManager() : mRunning(false), mPause(false), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false} {
-    mConsole = new Console;
-}
+GameManager::GameManager() : mRunning(false), mPause(false) { mConsole = new Console; }
 
 GameManager::~GameManager() { stop(); }
 
@@ -39,6 +37,7 @@ void GameManager::resume() {
         GameRunStateEvent event;
         event.pause = false;
         event.running = mRunning;
+        event.reset = false;
         pushEvent(event);
     }
 }
@@ -48,6 +47,17 @@ void GameManager::stop() {
         GameRunStateEvent event;
         event.pause = mPause;
         event.running = false;
+        event.reset = false;
+        pushEvent(event);
+    }
+}
+
+void GameManager::reset() {
+    if (mRunning) {
+        GameRunStateEvent event;
+        event.pause = mPause;
+        event.running = mRunning;
+        event.reset = true;
         pushEvent(event);
     }
 }
@@ -59,19 +69,6 @@ bool GameManager::isStop() const { return !mRunning; }
 void GameManager::setKeyPressed(int player, Button button, bool pressed) {
     if (player > 2) {
         return;
-    }
-    if (player == 1) {
-        if (mPlayOneKeyBuffer[(int)button] == pressed) {
-            return;
-        } else {
-            mPlayOneKeyBuffer[(int)button] = pressed;
-        }
-    } else {
-        if (mPlayTwoKeyBuffer[(int)button] == pressed) {
-            return;
-        } else {
-            mPlayTwoKeyBuffer[(int)button] = pressed;
-        }
     }
     if (mRunning && !mPause) {
         KeyEvent event;
@@ -178,6 +175,9 @@ void GameManager::processLoadStateEvent(const LoadStateEvent &event) {
 void GameManager::processGameRunStateEvent(const GameRunStateEvent &event) {
     mRunning = event.running;
     mPause = event.pause;
+    if (event.reset) {
+        mConsole->reset();
+    }
 }
 
 void GameManager::pushEvent(const Event &event) {

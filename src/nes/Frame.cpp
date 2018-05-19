@@ -46,12 +46,16 @@ void Frame::setRGBA(int x, int y, RGBA rgba) {
     uint8_t r = (rgba >> 24) & 0xFF;
     uint8_t g = (rgba >> 16) & 0xFF;
     uint8_t b = (rgba >> 8) & 0xFF;
-    // uint8_t a = (rgba >> 0) & 0xFF;
+    uint8_t a = (rgba >> 0) & 0xFF;
     int index = (x + (y * WIDTH)) * 3;
     mData[index] = r;
     mData[index + 1] = g;
     mData[index + 2] = b;
-    // mData[index + 3] = a;
+    mData[index + 3] = a;
 }
 
 uint8_t *Frame::pixel() const { return mData; }
+
+void Frame::save(Serialize &serialize) { serialize.writeArray(mData, SIZE); }
+
+void Frame::load(Serialize &serialize) { serialize.readArray(mData, SIZE); }

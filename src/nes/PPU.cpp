@@ -8,14 +8,13 @@
 #include <chrono>
 
 PPU::PPU(Console *console)
-    : PPUMemory(console), cycle(0), scanLine(0), frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0),
-      x(0), w(0), f(0), reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),
+    : PPUMemory(console), cycle(0), scanLine(0), frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0), x(0), w(0),
+      f(0), reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),
       attributeTableByte(0), lowTileByte(0), highTileByte(0), tileData(0),
       spriteCount(0), spritePatterns{0}, spritePositions{0}, spritePriorities{0}, spriteIndexes{0}, flagNameTable(0),
-      flagIncrement(0), flagSpriteTable(0), flagBackgroundTable(0), flagSpriteSize(0), flagMasterSlave(0),
-      flagGrayScale(0), flagShowLeftBackground(0), flagShowLeftSprites(0), flagShowBackground(0), flagShowSprites(0),
-      flagRedTint(0), flagGreenTint(0), flagBlueTint(0), flagSpriteZeroHit(0), flagSpriteOverflow(0), oamAddress(0),
-      bufferedData(0) {
+      flagIncrement(0), flagSpriteTable(0), flagBackgroundTable(0), flagSpriteSize(0), flagMasterSlave(0), flagGrayScale(0),
+      flagShowLeftBackground(0), flagShowLeftSprites(0), flagShowBackground(0), flagShowSprites(0), flagRedTint(0),
+      flagGreenTint(0), flagBlueTint(0), flagSpriteZeroHit(0), flagSpriteOverflow(0), oamAddress(0), bufferedData(0) {
     front = new Frame;
     back = new Frame;
 }

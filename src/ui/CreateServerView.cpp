@@ -2,8 +2,7 @@
 #include <string.h>
 #include <string>
 
-CreateServerView::CreateServerView()
-    : UIComponent("CreateServer"), mPortBuffer{0}, mSkipFrameBuffer{0}, mQualityBuffer{0} {
+CreateServerView::CreateServerView() : UIComponent("CreateServer"), mPortBuffer{0}, mSkipFrameBuffer{0} {
     setWindowFlags(ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 }
 
@@ -15,8 +14,7 @@ void CreateServerView::onBeforeRender() { ImGui::SetNextWindowSize(ImVec2(270, 1
 
 void CreateServerView::onShow() {
     strcpy(mPortBuffer, "5000");
-    strcpy(mSkipFrameBuffer, "1");
-    strcpy(mQualityBuffer, "80");
+    strcpy(mSkipFrameBuffer, "8");
 }
 
 void CreateServerView::onRender() {
@@ -32,11 +30,6 @@ void CreateServerView::onRender() {
     ImGui::InputText("##SkipFrame", mSkipFrameBuffer, INPUT_BUFFER_SIZE, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
     ImGui::SameLine();
-    ImGui::Text("Quality:");
-    ImGui::SameLine();
-    ImGui::PushItemWidth(45);
-    ImGui::InputText("##Quality", mQualityBuffer, INPUT_BUFFER_SIZE, ImGuiInputTextFlags_CharsDecimal);
-    ImGui::PopItemWidth();
     ImGui::Spacing();
 
     ImGui::SetCursorPosX(ImGui::GetContentRegionAvailWidth() - 100);
@@ -45,11 +38,6 @@ void CreateServerView::onRender() {
         Data data;
         data.port = std::stoi(mPortBuffer);
         data.skipFrame = std::stoi(mSkipFrameBuffer);
-        data.quality = std::stoi(mQualityBuffer);
-
-        if (data.quality > 100) {
-            data.quality = 100;
-        }
 
         for (const Clicklistenter &listener : mListeners) {
             listener(UI_ID::CreateServerView_Btn_Create, &data);

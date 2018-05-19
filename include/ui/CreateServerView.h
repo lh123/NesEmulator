@@ -11,7 +11,6 @@ public:
     struct Data {
         unsigned short port;
         int skipFrame;
-        int quality;
     };
 
     using Clicklistenter = std::function<void(UI_ID, void *)>;
@@ -28,7 +27,6 @@ protected:
 private:
     char mPortBuffer[INPUT_BUFFER_SIZE];
     char mSkipFrameBuffer[INPUT_BUFFER_SIZE];
-    char mQualityBuffer[INPUT_BUFFER_SIZE];
     std::vector<Clicklistenter> mListeners;
 };
 

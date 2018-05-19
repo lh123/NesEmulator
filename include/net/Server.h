@@ -6,18 +6,13 @@
 #include <condition_variable>
 #include <vector>
 
-#include "net/Packet.h"
+#include "net/GamePacket.h"
 
 class Server {
 public:
     static constexpr int BUFFER_SIZE = 1024000;
-
-    struct Client {
-        int id;
-        SOCKET socket;
-        std::string ipAddr;
-        bool running;
-    };
+    using DataRecvListener = std::function<void(const GamePacketHead &head, const char *data)>;
+    using ConnectStateListener = std::function<void(bool connect)>;
 
     Server();
     ~Server();
@@ -27,38 +22,26 @@ public:
 
     bool isRunning() const;
 
-private:
-    void sendDataToOther(int clientId, const char *data, int size);
+    void sendData(GamePacketType type, const char *data, int size);
 
+    void setDataRecvListener(const DataRecvListener &listener);
+    void setConnectStateListener(const ConnectStateListener &listener);
+
+private:
     void sendDataInternal(SOCKET socket, const char *data, int size);
     bool recvDataInternal(SOCKET socket, char *data, int size);
-    int findClientIndexById(int clientId);
 
     void handleAcceptThread();
-    void handleClientThread(Client *client);
-
-    int generateId();
-    int getClientSize();
-
-    void waitAcceptThreadQuit();
-
-    void waitAllClientThreadQuit();
-    void notifyClientThreadQuit();
+    void handleClientThread();
 
 private:
     bool mRunning;
-
-    int mGenerateIdCounter;
-
     SOCKET mServer;
-    std::vector<Client *> mClientList;
-    std::mutex mClientListMutex;
+    SOCKET mClient;
+    bool mClientConnected;
 
-    std::mutex mAcceptThreadMutex;
-    std::mutex mQuitMutex;
-    std::condition_variable mQuitCondition;
-
-    std::mutex mSendMutex;
+    DataRecvListener mDataRecvListener;
+    ConnectStateListener mConnectListener;
 };
 
 #endif

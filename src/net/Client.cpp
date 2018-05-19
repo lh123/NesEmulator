@@ -2,9 +2,13 @@
 #include <iostream>
 #include <cstring>
 
-Client::Client() : mShouldDisconnect(false), mIsConnect(false), mDataRecvListener(nullptr), mClienConnectListener(nullptr) {}
+Client::Client() : mIsConnect(false), mDataRecvListener(nullptr), mConnectListener(nullptr) {}
 
-Client::~Client() {}
+Client::~Client() {
+    if (mIsConnect) {
+        disconnect();
+    }
+}
 
 bool Client::connect(const char *serverIp, unsigned short port) {
     if (mIsConnect) {
@@ -34,17 +38,18 @@ bool Client::connect(const char *serverIp, unsigned short port) {
         ::WSACleanup();
         return false;
     }
+    mIsConnect = true;
     std::thread th([this]() { run(); });
     th.detach();
-    mIsConnect = true;
     return true;
 }
 
-void Client::sendData(const char *data, int size) {
+void Client::sendData(GamePacketType type, const char *data, int size) {
     if (mIsConnect) {
-        PacketHead head(PacketType::Data);
+        GamePacketHead head;
+        head.type = type;
         head.size = size;
-        sendDataInternal(reinterpret_cast<const char *>(&head), sizeof(head));
+        sendDataInternal(reinterpret_cast<const char *>(&head), sizeof(GamePacketHead));
         sendDataInternal(data, size);
     }
 }
@@ -59,7 +64,6 @@ bool Client::sendDataInternal(const char *data, int size) {
         if (ret == SOCKET_ERROR) {
             errorTimes++;
             if (errorTimes >= 3) {
-                std::cout << "SOCKET_ERROR\n";
                 success = false;
                 break;
             }
@@ -79,7 +83,6 @@ bool Client::recvDataInternal(char *data, int size) {
         if (ret == SOCKET_ERROR) {
             errorTimes++;
             if (errorTimes >= 3) {
-                std::cout << "SOCKET_ERROR\n";
                 success = false;
                 break;
             }
@@ -90,16 +93,13 @@ bool Client::recvDataInternal(char *data, int size) {
     return success;
 }
 
-void Client::setDataRecvListener(DataRecvListener listener) { mDataRecvListener = listener; }
+void Client::setDataRecvListener(const DataRecvListener &listener) { mDataRecvListener = listener; }
 
-void Client::setClientConnectListener(ClientConnectListener listener) { mClienConnectListener = listener; }
-
-void Client::setClientDisconnectListener(ClientDisconnectListener listener) { mClienDisconnectListener = listener; }
+void Client::setConnectStateListener(const ConnectStateListener &listener) { mConnectListener = listener; }
 
 void Client::disconnect() {
     if (mIsConnect) {
-        mIsConnect = true;
-        mShouldDisconnect = true;
+        mIsConnect = false;
         ::closesocket(mServer);
         ::WSACleanup();
     }
@@ -108,55 +108,32 @@ void Client::disconnect() {
 bool Client::isConnect() const { return mIsConnect; }
 
 void Client::run() {
-    PacketHead head;
+    if (mConnectListener != nullptr) {
+        mConnectListener(true);
+    }
     size_t bufferSize = BUFFER_SIZE;
     char *buffer = new char[bufferSize];
-    while (!mShouldDisconnect) {
-        if (recvDataInternal(reinterpret_cast<char *>(&head), sizeof(PacketHead))) {
-            if (head.magic == PacketHead::MAGIC) {
-                if (head.type == PacketType::ClientConnect) {
-                    if (recvDataInternal(buffer, head.size)) {
-                        if (mClienConnectListener != nullptr) {
-                            mClienConnectListener(reinterpret_cast<ClientInfoPacket *>(buffer));
-                        }
-                    } else {
-                        disconnect();
-                    }
-                } else if (head.type == PacketType::ClientDisconnect) {
-                    if (recvDataInternal(buffer, head.size)) {
-                        if (mClienDisconnectListener != nullptr) {
-                            mClienDisconnectListener(reinterpret_cast<ClientInfoPacket *>(buffer));
-                        }
-                    } else {
-                        disconnect();
-                    }
-                } else if (head.type == PacketType::Data) {
-                    if (head.size > bufferSize) {
-                        size_t oldSize = bufferSize;
-                        size_t newSize = oldSize;
-                        while (newSize < head.size) {
-                            newSize *= 2;
-                        }
-                        delete[] buffer;
-                        buffer = new char[newSize];
-                        bufferSize = newSize;
-                    }
-                    if (recvDataInternal(buffer, head.size)) {
-                        if (mDataRecvListener != nullptr) {
-                            mDataRecvListener(buffer, head.size);
-                        }
-                    } else {
-                        disconnect();
-                    }
-                } else {
-                    std::cout << "Invalid Packet Type\n";
+    GamePacketHead head;
+    while (mIsConnect) {
+        if (recvDataInternal(reinterpret_cast<char *>(&head), sizeof(GamePacketHead))) {
+            if (head.size > bufferSize) {
+                bufferSize = head.size;
+                delete[] buffer;
+                buffer = new char[bufferSize];
+            }
+            if (recvDataInternal(buffer, head.size)) {
+                if (mDataRecvListener != nullptr) {
+                    mDataRecvListener(head, buffer);
                 }
             } else {
-                std::cout << "Invalid Packet Head\n";
+                disconnect();
             }
         } else {
             disconnect();
         }
     }
     delete[] buffer;
+    if (mConnectListener != nullptr) {
+        mConnectListener(false);
+    }
 }

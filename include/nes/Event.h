@@ -16,6 +16,7 @@ struct LoadStateEvent {};
 struct GameRunStateEvent {
     bool pause;
     bool running;
+    bool reset;
 };
 
 class Event {

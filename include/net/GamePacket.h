@@ -5,22 +5,25 @@
 #include "nes/Controller.h"
 #include "net/FrameCompress.h"
 
-enum class GamePacketType { Frame, Key, Audio };
+enum class GamePacketType { Pause, Resume, Key, Sync };
 
 struct GamePacketHead {
     GamePacketType type;
-    int size;
+    size_t size;
 };
 
-// struct GameFramePacket {
-//     uint8_t imageData[Frame::SIZE];
-// };
+struct GamePausePacket {};
+
+struct GameResumePacket {};
 
 struct GameKeyPacket {
+    int player;
     Button button;
     bool pressed;
 };
 
-struct GameAudioPacket {};
+// struct SyncPacket {
+//     char *syncData;
+// };
 
 #endif

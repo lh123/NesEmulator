@@ -9,9 +9,10 @@
 #include "ui/ImGuiExt.h"
 #include "ui/KeyConfig.h"
 
-Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Local), mOpenAudio(true) {
+Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mPlayOneKeyBuffer{false}, mPlayTwoKeyBuffer{false}, mOpenAudio(true) {
     mAudio = new Audio;
     mGameManager = new GameManager;
+    mGameProxy = new GameNetProxy(mGameManager);
     mConfig = new Config;
     if (!mConfig->loadFromDisk("./nes.ini")) {
         mConfig->save();
@@ -21,6 +22,7 @@ Window::Window() : mWindow(nullptr), mGameProxy(nullptr), mGameType(GameType::Lo
 
 Window::~Window() {
     delete mAudio;
+    delete mGameProxy;
     delete mGameManager;
     delete mConfig;
 }
@@ -101,6 +103,13 @@ void Window::initGUI() {
 void Window::destoryGUI() {
     glDeleteTextures(1, &mFrameTexture);
 
+    if (mGameProxy->currentMode() == GameProxyMode::Master) {
+        mGameProxy->stopServer();
+        mGameProxy->disconnect();
+    } else if (mGameProxy->currentMode() == GameProxyMode::Slave) {
+        mGameProxy->disconnect();
+    }
+
     mGameManager->stop();
 
     mCreateServerView->close();
@@ -128,101 +137,43 @@ void Window::onClick(UI_ID id, void *data) {
 }
 
 void Window::startGame(std::string path) {
-    if (mGameType == GameType::Host || mGameType == GameType::Local) {
-        if (mGameManager->isStop()) {
-            mGameManager->startGame(path);
-            mAudio->setAudioBuffer(mGameManager->getAudioBuffer());
-            mAudio->play();
-        }
+    if (mGameManager->isStop()) {
+        mGameManager->startGame(path);
+        mAudio->setAudioBuffer(mGameManager->getAudioBuffer());
+        mAudio->play();
     }
 }
 
 void Window::stopGame() {
-    if (mGameType == GameType::Host || mGameType == GameType::Local) {
-        if (!mGameManager->isStop()) {
-            mGameManager->stop();
-            mAudio->pause();
-        }
+    if (!mGameManager->isStop()) {
+        mGameManager->stop();
+        mAudio->pause();
     }
 }
 
 void Window::startGameHost(unsigned short port, int quality, int frameSkip) {
-    if (mGameType == GameType::Host) {
-        return;
+    if (mGameProxy->currentMode() == GameProxyMode::Local) {
+        mGameProxy->startServer(port);
+        mGameProxy->setFrameSkip(frameSkip);
     }
-    mGameType = GameType::Host;
-
-    if (mGameProxy != nullptr) {
-        return;
-    }
-
-    mGameProxy = new GameProxy(GameProxyMode::Host);
-    mGameProxy->startServer(port);
-    mGameProxy->setQuality(quality);
-    mGameProxy->setFrameSkip(frameSkip);
-
-    mGameProxy->setOnKeyListener([this](Button button, bool presses) {
-        if (mGameManager->isStop() || mGameManager->isPause()) {
-            return;
-        }
-        mGameManager->setKeyPressed(2, button, presses);
-    });
-    mAudio->setOnFillAudioListener([this](const float *audio, int length) {
-        if (mGameManager->isStop() || mGameManager->isPause()) {
-            return;
-        }
-        mGameProxy->sendAudioInfoToServer(audio, length);
-    });
 }
 
 void Window::stopGameHost() {
-    if (mGameType != GameType::Host) {
-        return;
+    if (mGameProxy->currentMode() == GameProxyMode::Master) {
+        mGameProxy->stopServer();
     }
-    mGameType = GameType::Local;
-    if (mGameProxy == nullptr) {
-        return;
-    }
-
-    mGameProxy->stopServer();
-    delete mGameProxy;
-    mGameProxy = nullptr;
-
-    mAudio->setOnFillAudioListener(nullptr);
 }
 
 void Window::connectToHost(std::string ip, unsigned short port) {
-    if (mGameType == GameType::Client) {
-        return;
+    if (mGameProxy->currentMode() == GameProxyMode::Local) {
+        mGameProxy->connectTo(ip, port);
     }
-
-    mGameType = GameType::Client;
-
-    if (mGameProxy != nullptr) {
-        return;
-    }
-
-    mGameProxy = new GameProxy(GameProxyMode::Client);
-    mGameProxy->connectTo(ip, port);
-    mGameProxy->setOnFrameListener([this](const Frame *frame) { processGameFrame(frame); });
-    mAudio->setAudioBuffer(mGameProxy->getAudioBuffer());
-    mAudio->play();
 }
 
 void Window::disconnect() {
-    if (mGameType != GameType::Client) {
-        return;
+    if (mGameProxy->currentMode() == GameProxyMode::Slave) {
+        mGameProxy->disconnect();
     }
-
-    mGameType = GameType::Local;
-
-    if (mGameProxy == nullptr) {
-        return;
-    }
-
-    mGameProxy->disconnect();
-    delete mGameProxy;
-    mGameProxy = nullptr;
 }
 
 void Window::renderGUI() {
@@ -232,7 +183,7 @@ void Window::renderGUI() {
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Open", nullptr, false, mGameType != GameType::Client)) {
+            if (ImGui::MenuItem("Open")) {
                 if (ImGui::showFileDialog(buffer, 125)) {
                     startGame(buffer);
                 }
@@ -249,18 +200,18 @@ void Window::renderGUI() {
         }
 
         if (ImGui::BeginMenu("Multiplayer")) {
-            if (mGameType == GameType::Local) {
-                if (ImGui::MenuItem("Create Server")) {
+            if (mGameProxy->currentMode() == GameProxyMode::Local) {
+                if (ImGui::MenuItem("Create Server", nullptr, false, !mGameManager->isStop())) {
                     mCreateServerView->show();
                 }
-                if (ImGui::MenuItem("Connect to Server", nullptr, false, mGameManager->isStop())) {
+                if (ImGui::MenuItem("Connect to Server", nullptr, false, !mGameManager->isStop())) {
                     mJoinServerView->show();
                 }
-            } else if (mGameType == GameType::Host) {
+            } else if (mGameProxy->currentMode() == GameProxyMode::Master) {
                 if (ImGui::MenuItem("Stop Server")) {
                     stopGameHost();
                 }
-            } else {
+            } else if (mGameProxy->currentMode() == GameProxyMode::Slave) {
                 if (ImGui::MenuItem("Disconnect")) {
                     disconnect();
                 }
@@ -278,9 +229,11 @@ void Window::renderGUI() {
             }
             if (ImGui::MenuItem("Pause", nullptr, false, !mGameManager->isStop() && !mGameManager->isPause())) {
                 mGameManager->pause();
+                mGameProxy->pause();
             }
             if (ImGui::MenuItem("Resume", nullptr, false, !mGameManager->isStop() && mGameManager->isPause())) {
                 mGameManager->resume();
+                mGameProxy->resume();
             }
             ImGui::EndMenu();
         }
@@ -331,20 +284,16 @@ void Window::processGameFrame(const Frame *frame) {
     if (tryLock.try_lock()) {
         mFrameBuffer = *frame;
     }
+    mGameProxy->sync();
 }
 
 void Window::processGameKey(Button button, bool pressed) {
-    if (mGameProxy == nullptr) {
-        // Local
-        mGameManager->setKeyPressed(1, button, pressed);
-    } else {
-        if (mGameProxy->currentMode() == GameProxyMode::Host) {
-            // Host
-            mGameManager->setKeyPressed(1, button, pressed);
-        } else {
-            // Client
-            mGameProxy->sendKeyInfoToServer(button, pressed);
-        }
+    int player = mGameProxy->currentMode() == GameProxyMode::Slave ? 2 : 1;
+    bool *playBuffer = player == 1 ? mPlayOneKeyBuffer : mPlayTwoKeyBuffer;
+    if (playBuffer[static_cast<int>(button)] != pressed) {
+        playBuffer[static_cast<int>(button)] = pressed;
+        mGameManager->setKeyPressed(player, button, pressed);
+        mGameProxy->setKeyPressed(player, button, pressed);
     }
 }
 
@@ -359,15 +308,12 @@ void Window::renderGameFrame() {
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                      ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    if (!mGameManager->isStop() || (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Client)) {
+    if (!mGameManager->isStop() && !mGameManager->isPause()) {
         readKeys();
         std::lock_guard<std::mutex> lock(mFrameBufferMutex);
         glBindTexture(GL_TEXTURE_2D, mFrameTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mFrameBuffer.pixel());
         ImGui::Image(reinterpret_cast<void *>(mFrameTexture), ImGui::GetContentRegionAvail());
-        if (mGameProxy != nullptr && mGameProxy->currentMode() == GameProxyMode::Host) {
-            mGameProxy->sendFrameInfoToServer(&mFrameBuffer);
-        }
     }
 
     ImGui::End();

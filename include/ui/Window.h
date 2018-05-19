@@ -15,9 +15,9 @@
 #include "ui/ID.h"
 #include "ui/Config.h"
 
-#include "net/GameProxy.h"
+#include "net/GameNetProxy.h"
 
-enum class GameType { Local, Host, Client };
+// enum class GameType { Local, Host, Client };
 
 class Window {
 public:
@@ -74,14 +74,16 @@ private:
     Config *mConfig;
 
     GameManager *mGameManager;
-    GameProxy *mGameProxy;
-    GameType mGameType;
+    GameNetProxy *mGameProxy;
+    // GameType mGameType;
 
     Frame mFrameBuffer;
     std::mutex mFrameBufferMutex;
     unsigned int mFrameTexture;
 
     int mKeyCode[8];
+    bool mPlayOneKeyBuffer[8];
+    bool mPlayTwoKeyBuffer[8];
 
     bool mOpenAudio;
     bool mAudioInit;

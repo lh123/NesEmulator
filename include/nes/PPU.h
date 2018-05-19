@@ -78,13 +78,12 @@ private:
 
     void tick();
 
-public:
+private:
+    // storage variables
     int cycle;      // 0-340
     int scanLine;   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
     uint64_t frame; // frame counter
 
-private:
-    // storage variables
     uint8_t paletteData[PALETTE_DATA_SIZE];
     uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];

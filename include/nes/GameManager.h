@@ -23,6 +23,8 @@ public:
     void pause();
     void resume();
     void stop();
+    
+    void reset();
 
     bool isPause() const;
     bool isStop() const;
@@ -63,9 +65,6 @@ private:
 
     std::mutex mEventQueueMutex;
     std::queue<Event> mEventQueue;
-
-    bool mPlayOneKeyBuffer[8];
-    bool mPlayTwoKeyBuffer[8];
 
     Serialize mSyncStateBuffer;
     std::mutex mSyncStateMutex;
