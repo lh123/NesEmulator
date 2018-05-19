@@ -9,7 +9,6 @@ Serialize::Serialize() {
 }
 
 Serialize::Serialize(const Serialize &other) : Serialize() {
-
     checkSize(other.size());
     memcpy(mWrite, other.mRead, other.size());
     mWrite += other.size();
@@ -54,6 +53,7 @@ Serialize &Serialize::operator=(const Serialize &other) {
     }
     memcpy(mWrite, other.mRead, other.size());
     mWrite += other.size();
+    return *this;
 }
 
 Serialize &Serialize::operator=(Serialize &&other) {
@@ -69,6 +69,7 @@ Serialize &Serialize::operator=(Serialize &&other) {
     other.mRead = nullptr;
     other.mStart = nullptr;
     other.mEnd = nullptr;
+    return *this;
 }
 
 void Serialize::writeToStream(std::ostream &stream) { stream.write(mRead, size()); }
