@@ -127,7 +127,7 @@ void Window::destoryGUI() {
 void Window::onClick(UI_ID id, void *data) {
     if (id == UI_ID::CreateServerView_Btn_Create) {
         CreateServerView::Data *hostData = reinterpret_cast<CreateServerView::Data *>(data);
-        startGameHost(hostData->port, hostData->quality, hostData->skipFrame);
+        startGameHost(hostData->port, hostData->skipFrame);
     } else if (id == UI_ID::JoinServerView_Btn_Connect) {
         JoinServerView::Data *clientData = reinterpret_cast<JoinServerView::Data *>(data);
         connectToHost(clientData->ip, clientData->port);
@@ -151,7 +151,7 @@ void Window::stopGame() {
     }
 }
 
-void Window::startGameHost(unsigned short port, int quality, int frameSkip) {
+void Window::startGameHost(unsigned short port, int frameSkip) {
     if (mGameProxy->currentMode() == GameProxyMode::Local) {
         mGameProxy->startServer(port);
         mGameProxy->setFrameSkip(frameSkip);

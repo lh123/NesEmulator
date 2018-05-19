@@ -48,7 +48,7 @@ private:
     void startGame(std::string path);
     void stopGame();
 
-    void startGameHost(unsigned short port, int quality, int frameSkip);
+    void startGameHost(unsigned short port, int frameSkip);
     void stopGameHost();
 
     void connectToHost(std::string ip, unsigned short port);
