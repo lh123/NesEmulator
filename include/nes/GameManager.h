@@ -6,15 +6,14 @@
 #include "nes/Serialize.hpp"
 
 #include <string>
-#include <functional>
 #include <mutex>
 #include <queue>
 #include <iostream>
 
 class GameManager {
 public:
-    using FrameListener = std::function<void(const Frame *)>;
-    using SaveStateCallBack = std::function<void(const Serialize &)>;
+    using FrameListener = void (*)(void *userData, const Frame *frame);
+    static constexpr char MAGIC_STR[] = "NES STATE FILE";
 
     GameManager();
     ~GameManager();
@@ -23,7 +22,7 @@ public:
     void pause();
     void resume();
     void stop();
-    
+
     void reset();
 
     bool isPause() const;
@@ -31,13 +30,13 @@ public:
 
     void setKeyPressed(int player, Button key, bool pressed);
 
-    void setOnFrameListener(const FrameListener &listener);
+    void setOnFrameListener(void *userData, const FrameListener &listener);
 
     void setOpenAudio(bool open);
 
     AudioBuffer *getAudioBuffer() const;
 
-    void saveState(const SaveStateCallBack &callback);
+    void saveState(void *userData, SaveStateEvent::SaveStateCallBack callback);
     void loadState(const Serialize &state);
 
 private:
@@ -57,7 +56,7 @@ private:
     std::string mGameName;
 
     FrameListener mFrameListener;
-    SaveStateCallBack mSaveStateCallBack;
+    void *mUserData;
 
     Console *mConsole;
     bool mRunning;

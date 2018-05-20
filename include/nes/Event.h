@@ -3,15 +3,23 @@
 
 #include "nes/Controller.h"
 
+class Serialize;
+
 struct KeyEvent {
     int player;
     Button button;
     bool pressed;
 };
 
-struct SaveStateEvent {};
+struct SaveStateEvent {
+    using SaveStateCallBack = void (*)(void *userData, const Serialize &);
+    void *userData;
+    SaveStateCallBack callback;
+};
 
-struct LoadStateEvent {};
+struct LoadStateEvent {
+    Serialize *state;
+};
 
 struct GameRunStateEvent {
     bool pause;

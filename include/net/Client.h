@@ -4,15 +4,14 @@
 #include <winsock2.h>
 #include <thread>
 #include <mutex>
-#include <functional>
 #include "net/GamePacket.h"
 
 class Client {
 public:
     static constexpr int BUFFER_SIZE = 1024000;
 
-    using DataRecvListener = std::function<void(const GamePacketHead &head, const char *buffer)>;
-    using ConnectStateListener = std::function<void(bool connect)>;
+    using DataRecvListener = void (*)(void *userData, const GamePacketHead &head, const char *buffer);
+    using ConnectStateListener = void (*)(void *userData, bool connect);
 
     Client();
     ~Client();
@@ -24,8 +23,8 @@ public:
 
     void sendData(GamePacketType type, const char *data, int size);
 
-    void setDataRecvListener(const DataRecvListener &listener);
-    void setConnectStateListener(const ConnectStateListener &listener);
+    void setDataRecvListener(void *userData, DataRecvListener listener);
+    void setConnectStateListener(void *userData, ConnectStateListener listener);
 
 private:
     void run();
@@ -39,7 +38,10 @@ private:
     bool mIsConnect;
 
     DataRecvListener mDataRecvListener;
+    void *mDataRecvUserData;
+
     ConnectStateListener mConnectListener;
+    void *mConnectStateUserData;
 };
 
 #endif

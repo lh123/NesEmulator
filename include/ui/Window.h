@@ -5,7 +5,6 @@
 #include <GLFW/glfw3.h>
 #include <mutex>
 
-#include "nes/Serialize.hpp"
 #include "nes/GameManager.h"
 
 #include "ui/Audio.h"
@@ -88,7 +87,7 @@ private:
     bool mOpenAudio;
     bool mAudioInit;
 
-    Serialize mGameState;
+    // Serialize mGameState;
 };
 
 #endif

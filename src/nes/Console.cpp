@@ -79,8 +79,8 @@ uint32_t Console::step() {
 
 uint32_t Console::stepFrame() {
     uint64_t cpuCycle = 0;
-    uint64_t frame = ppu->frame;
-    while (frame == ppu->frame) {
+    uint64_t frame = ppu->currentFrame();
+    while (frame == ppu->currentFrame()) {
         cpuCycle += step();
     }
     return cpuCycle;

@@ -8,26 +8,26 @@
 #include <chrono>
 
 PPU::PPU(Console *console)
-    : PPUMemory(console), cycle(0), scanLine(0), frame(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0), x(0), w(0),
-      f(0), reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),
+    : PPUMemory(console), cycle(0), scanLine(0), frameCounter(0), paletteData{0}, nameTableData{0}, oamData{0}, v(0), t(0), x(0),
+      w(0), f(0), reg(0), nmiOccurred(false), nmiOutput(false), nmiPrevious(false), nmiDelay(0), nameTableByte(0),
       attributeTableByte(0), lowTileByte(0), highTileByte(0), tileData(0),
       spriteCount(0), spritePatterns{0}, spritePositions{0}, spritePriorities{0}, spriteIndexes{0}, flagNameTable(0),
       flagIncrement(0), flagSpriteTable(0), flagBackgroundTable(0), flagSpriteSize(0), flagMasterSlave(0), flagGrayScale(0),
       flagShowLeftBackground(0), flagShowLeftSprites(0), flagShowBackground(0), flagShowSprites(0), flagRedTint(0),
       flagGreenTint(0), flagBlueTint(0), flagSpriteZeroHit(0), flagSpriteOverflow(0), oamAddress(0), bufferedData(0) {
-    front = new Frame;
     back = new Frame;
+    front = new Frame;
 }
 
 PPU::~PPU() {
-    delete front;
     delete back;
+    delete front;
 }
 
 void PPU::reset() {
     cycle = 340;
     scanLine = 240;
-    frame = 0;
+    frameCounter = 0;
     writeControl(0);
     writeMask(0);
     writeOAMAddress(0);
@@ -35,6 +35,8 @@ void PPU::reset() {
     writeAddress(0);
     writeData(0);
 }
+
+uint64_t PPU::currentFrame() const { return frameCounter; }
 
 uint8_t PPU::readPalette(uint16_t address) {
     if (address >= 16 && (address % 4) == 0) {
@@ -480,7 +482,7 @@ void PPU::tick() {
         if (f == 1 && scanLine == 261 && cycle == 339) {
             cycle = 0;
             scanLine = 0;
-            frame++;
+            frameCounter++;
             f ^= 0x1;
             return;
         }
@@ -491,7 +493,7 @@ void PPU::tick() {
         scanLine++;
         if (scanLine > 261) {
             scanLine = 0;
-            frame++;
+            frameCounter++;
             f ^= 0x1;
         }
     }
@@ -570,7 +572,7 @@ void PPU::step() {
 void PPU::save(Serialize &serialize) {
     serialize << cycle;
     serialize << scanLine;
-    serialize << frame;
+    serialize << frameCounter;
     serialize.writeArray(paletteData, PALETTE_DATA_SIZE);
     serialize.writeArray(nameTableData, NAME_TABLE_DATA_SIZE);
     serialize.writeArray(oamData, OAM_DATA_SIZE);
@@ -617,7 +619,7 @@ void PPU::save(Serialize &serialize) {
 void PPU::load(Serialize &serialize) {
     serialize >> cycle;
     serialize >> scanLine;
-    serialize >> frame;
+    serialize >> frameCounter;
     serialize.readArray(paletteData, PALETTE_DATA_SIZE);
     serialize.readArray(nameTableData, NAME_TABLE_DATA_SIZE);
     serialize.readArray(oamData, OAM_DATA_SIZE);

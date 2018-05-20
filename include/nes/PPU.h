@@ -20,7 +20,10 @@ public:
 public:
     PPU(Console *console);
     ~PPU();
+
     void reset();
+    uint64_t currentFrame() const;
+
     uint8_t readRegister(uint16_t address);
     void writeRegister(uint16_t address, uint8_t value);
 
@@ -80,13 +83,14 @@ private:
 
 private:
     // storage variables
-    int cycle;      // 0-340
-    int scanLine;   // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
-    uint64_t frame; // frame counter
+    int cycle;             // 0-340
+    int scanLine;          // 0-261, 0-239=visible, 240=post, 241-260=vblank, 261=pre
+    uint64_t frameCounter; // frame counter
 
     uint8_t paletteData[PALETTE_DATA_SIZE];
     uint8_t nameTableData[NAME_TABLE_DATA_SIZE];
     uint8_t oamData[OAM_DATA_SIZE];
+
     Frame *front;
     Frame *back;
 

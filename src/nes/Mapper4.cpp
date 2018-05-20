@@ -5,8 +5,8 @@
 #include "nes/Serialize.hpp"
 
 Mapper4::Mapper4(Console *console, Cartridge *cartridge)
-    : console(console), cartridge(cartridge), _register(0), _registers{0}, prgMode(0),
-      chrMode(0), prgOffsets{0}, chrOffsets{0}, reload(0), counter(0), irqEnable(false) {
+    : console(console), cartridge(cartridge), _register(0), _registers{0}, prgMode(0), chrMode(0), prgOffsets{0}, chrOffsets{0},
+      reload(0), counter(0), irqEnable(false) {
     prgOffsets[0] = prgBankOffset(0);
     prgOffsets[1] = prgBankOffset(1);
     prgOffsets[2] = prgBankOffset(-2);

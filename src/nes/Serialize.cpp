@@ -1,5 +1,7 @@
 #include "nes/Serialize.hpp"
 
+size_t Serialize::DEFAULT_SIZE = 1024;
+
 Serialize::Serialize() {
     mWrite = nullptr;
     mRead = nullptr;
@@ -123,8 +125,9 @@ void Serialize::checkSize(size_t writeSize) {
         while (newSize < oldSize + writeSize) {
             newSize *= 2;
         }
+        DEFAULT_SIZE = newSize;
 
-        std::cout << "Serialize resize " << oldSize << "->" << newSize << std::endl;
+        // std::cout << "Serialize resize " << oldSize << "->" << newSize << std::endl;
 
         char *newStart = reinterpret_cast<char *>(operator new(newSize));
         char *newEnd = newStart + newSize;

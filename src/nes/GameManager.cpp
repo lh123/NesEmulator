@@ -5,6 +5,8 @@
 #include <chrono>
 #include <fstream>
 
+constexpr char GameManager::MAGIC_STR[];
+
 GameManager::GameManager() : mRunning(false), mPause(false) { mConsole = new Console; }
 
 GameManager::~GameManager() { stop(); }
@@ -28,6 +30,7 @@ void GameManager::pause() {
         GameRunStateEvent event;
         event.pause = true;
         event.running = mRunning;
+        event.reset = false;
         pushEvent(event);
     }
 }
@@ -79,7 +82,10 @@ void GameManager::setKeyPressed(int player, Button button, bool pressed) {
     }
 }
 
-void GameManager::setOnFrameListener(const FrameListener &listener) { mFrameListener = listener; }
+void GameManager::setOnFrameListener(void *userData, const FrameListener &listener) {
+    mUserData = userData;
+    mFrameListener = listener;
+}
 
 AudioBuffer *GameManager::getAudioBuffer() const {
     if (mRunning) {
@@ -89,18 +95,17 @@ AudioBuffer *GameManager::getAudioBuffer() const {
     }
 }
 
-void GameManager::saveState(const SaveStateCallBack &callback) {
-    if (mSaveStateCallBack == nullptr) {
-        mSaveStateCallBack = callback;
-        SaveStateEvent event;
-        pushEvent(event);
-    }
+void GameManager::saveState(void *userData, SaveStateEvent::SaveStateCallBack callback) {
+    SaveStateEvent event;
+    event.userData = userData;
+    event.callback = callback;
+    pushEvent(event);
 }
 
 void GameManager::loadState(const Serialize &state) {
-    std::lock_guard<std::mutex> lock(mSyncStateMutex);
-    mSyncStateBuffer = state;
     LoadStateEvent event;
+    Serialize *loadState = new Serialize(state);
+    event.state = loadState;
     pushEvent(event);
 }
 
@@ -122,7 +127,7 @@ void GameManager::handleGameThread() {
 
         if (frameDeltaTime >= 1000 / 60) {
             if (mFrameListener != nullptr) {
-                mFrameListener(mConsole->buffer());
+                mFrameListener(mUserData, mConsole->buffer());
             }
             frameLastTime = currentTime;
         }
@@ -152,24 +157,24 @@ void GameManager::dispatchEvent() {
 void GameManager::processKeyEvent(const KeyEvent &event) { mConsole->setPressed(event.player, event.button, event.pressed); }
 
 void GameManager::processSaveStateEvent(const SaveStateEvent &event) {
-    std::lock_guard<std::mutex> lock(mSyncStateMutex);
-    mSyncStateBuffer.clear();
-    mSyncStateBuffer << 0xFFEE;
-    mConsole->save(mSyncStateBuffer);
-    if (mSaveStateCallBack != nullptr) {
-        mSaveStateCallBack(mSyncStateBuffer);
-        mSaveStateCallBack = nullptr;
+    Serialize saveSerialize;
+    saveSerialize.writeArray(MAGIC_STR, sizeof(MAGIC_STR));
+    mConsole->save(saveSerialize);
+    if (event.callback != nullptr) {
+        event.callback(event.userData, saveSerialize);
     }
 }
 
 void GameManager::processLoadStateEvent(const LoadStateEvent &event) {
-    std::lock_guard<std::mutex> lock(mSyncStateMutex);
-    int magic;
-    mSyncStateBuffer >> magic;
-    if (magic == 0xFFEE) {
-        mConsole->load(mSyncStateBuffer);
+    char magic[sizeof(MAGIC_STR)] = {0};
+    Serialize &serialize = *event.state;
+    serialize.readArray(magic, sizeof(magic));
+    if (strcmp(magic, MAGIC_STR) == 0) {
+        mConsole->load(serialize);
+    } else {
+        std::cout << "invalid state" << std::endl;
     }
-    mSyncStateBuffer.clear();
+    delete event.state;
 }
 
 void GameManager::processGameRunStateEvent(const GameRunStateEvent &event) {

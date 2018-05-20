@@ -5,18 +5,25 @@
 #include "nes/GameManager.h"
 
 GameNetProxy::GameNetProxy(GameManager *manager)
-    : mMode(GameProxyMode::Local), mManager(manager), mHaveRecvPacketHead(false), mFrameSkipPeriod(0), mFrameSkipCouner(0) {
+    : mMode(GameProxyMode::Local), mManager(manager), mFrameSkipPeriod(0), mFrameSkipCouner(0) {
     mServer = new Server;
     mClient = new Client;
 
-    auto connectListener = [this](bool connect) { this->handlConnectState(connect); };
-    auto dataListener = [this](const GamePacketHead &head, const char *data) { this->handleDataRecv(head, data); };
+    auto connectListener = [](void *userData, bool connect) {
+        GameNetProxy *that = reinterpret_cast<GameNetProxy *>(userData);
+        that->handlConnectState(connect);
+    };
 
-    mServer->setConnectStateListener(connectListener);
-    mServer->setDataRecvListener(dataListener);
+    auto dataListener = [](void *userData, const GamePacketHead &head, const char *data) {
+        GameNetProxy *that = reinterpret_cast<GameNetProxy *>(userData);
+        that->handleDataRecv(head, data);
+    };
 
-    mClient->setConnectStateListener(connectListener);
-    mClient->setDataRecvListener(dataListener);
+    mServer->setConnectStateListener(this, connectListener);
+    mServer->setDataRecvListener(this, dataListener);
+
+    mClient->setConnectStateListener(this, connectListener);
+    mClient->setDataRecvListener(this, dataListener);
 }
 
 GameNetProxy::~GameNetProxy() {
@@ -108,7 +115,10 @@ void GameNetProxy::sync() {
 
 void GameNetProxy::syncImmediate() {
     if (mMode == GameProxyMode::Master) {
-        mManager->saveState([this](const Serialize &state) { sendSyncInfo(state); });
+        mManager->saveState(this, [](void *userData, const Serialize &state) {
+            GameNetProxy *that = reinterpret_cast<GameNetProxy *>(userData);
+            that->sendSyncInfo(state);
+        });
     }
 }
 
@@ -139,8 +149,7 @@ void GameNetProxy::sendKeyInfo(int player, Button button, bool pressed) {
 }
 
 void GameNetProxy::sendSyncInfo(const Serialize &state) {
-    mSyncBuffer = state;
-    auto data = mSyncBuffer.getData();
+    auto data = state.getData();
     sendInternal(GamePacketType::Sync, data.first, data.second);
 }
 
@@ -183,9 +192,9 @@ void GameNetProxy::handleGameKey(const char *data, int size) {
 }
 
 void GameNetProxy::handleSync(const char *data, int size) {
-    mSyncBuffer.clear();
-    mSyncBuffer.readFromMemory(data, size);
-    mManager->loadState(mSyncBuffer);
+    Serialize serialize;
+    serialize.readFromMemory(data, size);
+    mManager->loadState(serialize);
 }
 
 void GameNetProxy::handleGamePause() { mManager->pause(); }

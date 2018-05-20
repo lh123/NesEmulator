@@ -75,9 +75,15 @@ void Server::sendData(GamePacketType type, const char *data, int size) {
     }
 }
 
-void Server::setDataRecvListener(const DataRecvListener &listener) { mDataRecvListener = listener; }
+void Server::setDataRecvListener(void *userData, DataRecvListener listener) {
+    mDataRecvUserData = userData;
+    mDataRecvListener = listener;
+}
 
-void Server::setConnectStateListener(const ConnectStateListener &listener) { mConnectListener = listener; }
+void Server::setConnectStateListener(void *userData, ConnectStateListener listener) {
+    mConnectStateUserData = userData;
+    mConnectListener = listener;
+}
 
 void Server::sendDataInternal(SOCKET socket, const char *data, int size) {
     int sendByteSize = 0;
@@ -138,7 +144,7 @@ void Server::handleClientThread() {
     size_t bufferSize = BUFFER_SIZE;
     char *buffer = new char[bufferSize];
     if (mConnectListener != nullptr) {
-        mConnectListener(true);
+        mConnectListener(mConnectStateUserData, true);
     }
     while (mClientConnected) {
         if (recvDataInternal(mClient, reinterpret_cast<char *>(&head), sizeof(GamePacketHead))) {
@@ -149,7 +155,7 @@ void Server::handleClientThread() {
             }
             if (recvDataInternal(mClient, buffer, head.size)) {
                 if (mDataRecvListener != nullptr) {
-                    mDataRecvListener(head, buffer);
+                    mDataRecvListener(mDataRecvUserData, head, buffer);
                 }
             } else {
                 mClientConnected = false;
@@ -165,6 +171,6 @@ void Server::handleClientThread() {
     ::closesocket(mClient);
 
     if (mConnectListener != nullptr) {
-        mConnectListener(false);
+        mConnectListener(mConnectStateUserData, false);
     }
 }

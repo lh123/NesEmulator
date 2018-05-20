@@ -61,11 +61,6 @@ private:
     Client *mClient;
     Server *mServer;
 
-    GamePacketHead mPacketHead;
-    bool mHaveRecvPacketHead;
-
-    Serialize mSyncBuffer;
-
     int mFrameSkipPeriod;
     int mFrameSkipCouner;
 };

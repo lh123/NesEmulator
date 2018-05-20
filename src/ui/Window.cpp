@@ -6,6 +6,7 @@
 #include <imgui/imgui_impl_glfw_gl3.h>
 
 #include "nes/Controller.h"
+#include "nes/Serialize.hpp"
 #include "ui/ImGuiExt.h"
 #include "ui/KeyConfig.h"
 
@@ -97,7 +98,10 @@ void Window::initGUI() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    mGameManager->setOnFrameListener([this](const Frame *frame) { processGameFrame(frame); });
+    mGameManager->setOnFrameListener(this, [](void *userData, const Frame *frame) {
+        Window *that = reinterpret_cast<Window *>(userData);
+        that->processGameFrame(frame);
+    });
 }
 
 void Window::destoryGUI() {
@@ -359,11 +363,11 @@ void Window::readKeyConfig(Button btn, int *keyCode, int defaultKeyCode) {
 }
 
 void Window::saveState() {
-    mGameManager->saveState([this](const Serialize &state) {
-        mGameState = state;
+    mGameManager->saveState(nullptr, [](void *userData, const Serialize &state) {
+        Serialize saveState = state;
         std::ofstream stateFile("state.sav", std::ios::out | std::ios::binary);
         if (stateFile.is_open()) {
-            mGameState.writeToStream(stateFile);
+            saveState.writeToStream(stateFile);
         }
     });
 }
@@ -371,8 +375,8 @@ void Window::saveState() {
 void Window::loadState() {
     std::ifstream stateFile("state.sav", std::ios::in | std::ios::binary);
     if (stateFile.is_open()) {
-        mGameState.clear();
-        mGameState.readFromStream(stateFile);
-        mGameManager->loadState(mGameState);
+        Serialize loadState;
+        loadState.readFromStream(stateFile);
+        mGameManager->loadState(loadState);
     }
 }

@@ -8,7 +8,7 @@
 
 class Serialize {
 public:
-    static constexpr int DEFAULT_SIZE = 1024;
+    static size_t DEFAULT_SIZE;
 
     Serialize();
     Serialize(const Serialize &other);

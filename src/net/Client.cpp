@@ -93,9 +93,15 @@ bool Client::recvDataInternal(char *data, int size) {
     return success;
 }
 
-void Client::setDataRecvListener(const DataRecvListener &listener) { mDataRecvListener = listener; }
+void Client::setDataRecvListener(void *userData, DataRecvListener listener) {
+    mDataRecvUserData = userData;
+    mDataRecvListener = listener;
+}
 
-void Client::setConnectStateListener(const ConnectStateListener &listener) { mConnectListener = listener; }
+void Client::setConnectStateListener(void *userData, ConnectStateListener listener) {
+    mConnectStateUserData = userData;
+    mConnectListener = listener;
+}
 
 void Client::disconnect() {
     if (mIsConnect) {
@@ -109,7 +115,7 @@ bool Client::isConnect() const { return mIsConnect; }
 
 void Client::run() {
     if (mConnectListener != nullptr) {
-        mConnectListener(true);
+        mConnectListener(mConnectStateUserData, true);
     }
     size_t bufferSize = BUFFER_SIZE;
     char *buffer = new char[bufferSize];
@@ -123,7 +129,7 @@ void Client::run() {
             }
             if (recvDataInternal(buffer, head.size)) {
                 if (mDataRecvListener != nullptr) {
-                    mDataRecvListener(head, buffer);
+                    mDataRecvListener(mDataRecvUserData, head, buffer);
                 }
             } else {
                 disconnect();
@@ -134,6 +140,6 @@ void Client::run() {
     }
     delete[] buffer;
     if (mConnectListener != nullptr) {
-        mConnectListener(false);
+        mConnectListener(mConnectStateUserData, false);
     }
 }
