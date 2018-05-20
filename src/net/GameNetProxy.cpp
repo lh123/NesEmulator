@@ -172,9 +172,7 @@ void GameNetProxy::handleDataRecv(const GamePacketHead &head, const char *data) 
 
 void GameNetProxy::handlConnectState(bool connect) {
     if (connect) {
-        if (mMode == GameProxyMode::Master) {
-            mManager->reset();
-        }
+        // Current Do Nothing
     } else {
         if (mMode == GameProxyMode::Slave) {
             disconnect();

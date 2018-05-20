@@ -316,7 +316,7 @@ void Window::renderGameFrame() {
         readKeys();
         std::lock_guard<std::mutex> lock(mFrameBufferMutex);
         glBindTexture(GL_TEXTURE_2D, mFrameTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mFrameBuffer.pixel());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Frame::WIDTH, Frame::HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, mFrameBuffer.pixel());
         ImGui::Image(reinterpret_cast<void *>(mFrameTexture), ImGui::GetContentRegionAvail());
     }
 

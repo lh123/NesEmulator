@@ -9,9 +9,9 @@ class Serialize;
 
 class PPU : public PPUMemory {
 public:
-    static constexpr uint32_t OAM_DATA_SIZE = 256;
-    static constexpr uint32_t PALETTE_DATA_SIZE = 32;
-    static constexpr uint32_t NAME_TABLE_DATA_SIZE = 2048;
+    static constexpr int OAM_DATA_SIZE = 256;
+    static constexpr int PALETTE_DATA_SIZE = 32;
+    static constexpr int NAME_TABLE_DATA_SIZE = 2048;
 
     friend class PPUMemory;
     friend class Console;

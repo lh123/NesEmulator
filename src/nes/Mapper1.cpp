@@ -16,14 +16,14 @@ uint8_t Mapper1::read(uint16_t address) {
     if (address < 0x2000) {
         uint16_t bank = address / 0x1000;
         uint16_t offset = address % 0x1000;
-        return cartridge->chr[chrOffsets[bank] + offset];
+        return cartridge->readCHR(chrOffsets[bank] + offset);
     } else if (address >= 0x8000) {
         address = address - 0x8000;
         uint16_t bank = address / 0x4000;
         uint16_t offset = address % 0x4000;
-        return cartridge->prg[prgOffsets[bank] + offset];
+        return cartridge->readPRG(prgOffsets[bank] + offset);
     } else if (address >= 0x6000) {
-        return cartridge->sram[address - 0x6000];
+        return cartridge->readSRAM(address - 0x6000);
     } else {
         std::printf("error: mapper1 read at address: 0x%04X\n", address);
         return 0;
@@ -34,11 +34,11 @@ void Mapper1::write(uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         uint16_t bank = address / 0x1000;
         uint16_t offset = address % 0x1000;
-        cartridge->chr[chrOffsets[bank] + offset] = value;
+        cartridge->writeCHR(chrOffsets[bank] + offset, value);
     } else if (address >= 0x8000) {
         loadRegister(address, value);
     } else if (address >= 0x6000) {
-        cartridge->sram[address - 0x6000] = value;
+        cartridge->writeSRAM(address - 0x6000, value);
     } else {
         std::printf("error: mapper1 write at address: 0x%04X\n", address);
     }
@@ -80,16 +80,16 @@ void Mapper1::writeControl(uint8_t value) {
     uint8_t mirror = value & 0x3;
     switch (mirror) {
     case 0:
-        cartridge->mirror = uint8_t(Mirror::Single0);
+        cartridge->setMirror(Mirror::Single0);
         break;
     case 1:
-        cartridge->mirror = uint8_t(Mirror::Single1);
+        cartridge->setMirror(Mirror::Single1);
         break;
     case 2:
-        cartridge->mirror = uint8_t(Mirror::Vertical);
+        cartridge->setMirror(Mirror::Vertical);
         break;
     case 3:
-        cartridge->mirror = uint8_t(Mirror::Horizontal);
+        cartridge->setMirror(Mirror::Horizontal);
         break;
     }
     updateOffset();

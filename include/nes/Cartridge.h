@@ -4,6 +4,8 @@
 #include <cstdint>
 class Serialize;
 
+enum class Mirror { Horizontal = 0, Vertical = 1, Single0 = 2, Single1 = 3, Four = 4 };
+
 struct INesHeader {
 
     uint32_t magic;
@@ -17,22 +19,24 @@ struct INesHeader {
 
 class Cartridge {
 public:
-    static constexpr uint16_t SRAM_SIZE = 0x2000;
+    static constexpr int SRAM_SIZE = 0x2000;
 
-    uint8_t *prg;
-    uint8_t *chr;
-    uint8_t sram[SRAM_SIZE];
-
-    uint8_t mapper;
-    uint8_t mirror;
-    uint8_t battery;
-
-    bool trainer;
-
-public:
     Cartridge();
     ~Cartridge();
     bool loadNesFile(const char *path);
+
+    uint8_t readPRG(int index) const;
+
+    void writeCHR(int index, uint8_t value);
+    uint8_t readCHR(int index) const;
+
+    void writeSRAM(int index, uint8_t value);
+    uint8_t readSRAM(int index) const;
+
+    void setMirror(Mirror mirror);
+    Mirror currentMirror() const;
+    uint8_t currentMapper() const;
+
     int prgLength() const;
     int chrLength() const;
 
@@ -40,7 +44,17 @@ public:
     void load(Serialize &serialize);
 
 private:
-    INesHeader header;
+    INesHeader mHeader;
+    uint8_t *mPRG;
+    uint8_t *mCHR;
+    uint8_t mSRAM[SRAM_SIZE];
+
+    uint8_t mMapper;
+    Mirror mMirror;
+    uint8_t mBattery;
+
+    bool mTrainer;
+
     int mPRGLength;
     int mCHRLength;
 };

@@ -5,12 +5,12 @@
 const uint32_t NesMagic = 0x1a53454e;
 
 Cartridge::Cartridge()
-    : prg(nullptr), chr(nullptr), sram{0}, mapper(0), mirror(0), battery(0), trainer(false), header{0}, mPRGLength(0),
-      mCHRLength(0) {}
+    : mHeader{0}, mPRG(nullptr), mCHR(nullptr), mSRAM{0}, mMapper(0), mMirror(Mirror::Horizontal), mBattery(0), mTrainer(false),
+      mPRGLength(0), mCHRLength(0) {}
 
 Cartridge::~Cartridge() {
-    delete[] chr;
-    delete[] prg;
+    delete[] mCHR;
+    delete[] mPRG;
 }
 
 /**
@@ -24,17 +24,17 @@ bool Cartridge::loadNesFile(const char *path) {
         std::printf("open file \"%s\" failed!\n", path);
         return false;
     }
-    std::fread(&header.magic, sizeof(header.magic), 1, file);
-    if (header.magic != NesMagic) {
+    std::fread(&mHeader.magic, sizeof(mHeader.magic), 1, file);
+    if (mHeader.magic != NesMagic) {
         std::printf("invalid nes file!\n");
         return false;
     }
 
-    std::fread(&header.numPRG, sizeof(header.numPRG), 1, file);
-    std::fread(&header.numCHR, sizeof(header.numPRG), 1, file);
-    std::fread(&header.controller1, sizeof(header.controller1), 1, file);
-    std::fread(&header.controller2, sizeof(header.controller2), 1, file);
-    std::fread(&header.numRAM, sizeof(header.numRAM), 1, file);
+    std::fread(&mHeader.numPRG, sizeof(mHeader.numPRG), 1, file);
+    std::fread(&mHeader.numCHR, sizeof(mHeader.numPRG), 1, file);
+    std::fread(&mHeader.controller1, sizeof(mHeader.controller1), 1, file);
+    std::fread(&mHeader.controller2, sizeof(mHeader.controller2), 1, file);
+    std::fread(&mHeader.numRAM, sizeof(mHeader.numRAM), 1, file);
     uint8_t padding[7];
     std::fread(padding, sizeof(padding), 1, file);
     for (int i = 0; i < 7; i++) {
@@ -44,40 +44,64 @@ bool Cartridge::loadNesFile(const char *path) {
         }
     }
 
-    uint8_t mapper1 = header.controller1 >> 4;
-    uint8_t mapper2 = header.controller2 >> 4;
-    mapper = mapper1 | (mapper2 << 4);
-    mirror = (header.controller1 & 0x1) | ((header.controller1 >> 2) & 0x2);
-    battery = (header.controller1 >> 1) & 0x1;
+    uint8_t mapper1 = mHeader.controller1 >> 4;
+    uint8_t mapper2 = mHeader.controller2 >> 4;
+    mMapper = mapper1 | (mapper2 << 4);
+    mMirror = static_cast<Mirror>((mHeader.controller1 & 0x1) | ((mHeader.controller1 >> 2) & 0x2));
+    mBattery = (mHeader.controller1 >> 1) & 0x1;
 
-    trainer = (header.controller1 & 0x4) == 0x4;
+    mTrainer = (mHeader.controller1 & 0x4) == 0x4;
 
-    if (trainer) {
+    if (mTrainer) {
         std::printf("current not support trainer\n");
         return false;
     }
 
-    mPRGLength = header.numPRG * 0x4000;
-    prg = new uint8_t[mPRGLength];
-    std::fread(prg, mPRGLength, 1, file);
+    mPRGLength = mHeader.numPRG * 0x4000;
+    mPRG = new uint8_t[mPRGLength];
+    std::fread(mPRG, mPRGLength, 1, file);
 
-    if (header.numCHR != 0) {
-        mCHRLength = header.numCHR * 0x2000;
-        chr = new uint8_t[mCHRLength];
-        std::fread(chr, mCHRLength, 1, file);
+    if (mHeader.numCHR != 0) {
+        mCHRLength = mHeader.numCHR * 0x2000;
+        mCHR = new uint8_t[mCHRLength];
+        std::fread(mCHR, mCHRLength, 1, file);
     } else {
         mCHRLength = 0x2000;
-        chr = new uint8_t[mCHRLength]{0};
+        mCHR = new uint8_t[mCHRLength]{0};
     }
 
     std::fclose(file);
     return true;
 }
 
+uint8_t Cartridge::readPRG(int index) const { return mPRG[index]; }
+
+void Cartridge::writeCHR(int index, uint8_t value) { mCHR[index] = value; }
+
+uint8_t Cartridge::readCHR(int index) const { return mCHR[index]; }
+
+void Cartridge::writeSRAM(int index, uint8_t value) { mSRAM[index] = value; }
+
+uint8_t Cartridge::readSRAM(int index) const { return mSRAM[index]; }
+
+void Cartridge::setMirror(Mirror mirror) { mMirror = mirror; }
+
+Mirror Cartridge::currentMirror() const { return mMirror; }
+
+uint8_t Cartridge::currentMapper() const { return mMapper; }
+
 int Cartridge::prgLength() const { return mPRGLength; }
 
 int Cartridge::chrLength() const { return mCHRLength; }
 
-void Cartridge::save(Serialize &serialize) { serialize.writeArray(sram, SRAM_SIZE); }
+void Cartridge::save(Serialize &serialize) {
+    serialize.writeArray(mCHR, mCHRLength);
+    serialize.writeArray(mSRAM, SRAM_SIZE);
+    serialize << mMirror;
+}
 
-void Cartridge::load(Serialize &serialize) { serialize.readArray(sram, SRAM_SIZE); }
+void Cartridge::load(Serialize &serialize) {
+    serialize.readArray(mCHR, mCHRLength);
+    serialize.readArray(mSRAM, SRAM_SIZE);
+    serialize >> mMirror;
+}

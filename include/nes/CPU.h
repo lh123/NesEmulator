@@ -159,7 +159,7 @@ public:
 
 private:
     // Console *console;
-    uint32_t stall;   // number of cycles to stall
+    uint32_t stall;  // number of cycles to stall
     uint64_t cycles; // number of cycles
 
     uint16_t PC; // program counter

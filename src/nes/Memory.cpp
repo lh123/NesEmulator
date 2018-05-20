@@ -8,14 +8,6 @@
 #include "nes/Cartridge.h"
 #include <cstdio>
 
-static const int MirrorLookUp[5][4] = {
-    {0, 0, 1, 1}, //
-    {0, 1, 0, 1}, //
-    {0, 0, 0, 0}, //
-    {1, 1, 1, 1}, //
-    {0, 1, 2, 3}  //
-};
-
 Memory::Memory(Console *console) : console(console) {}
 
 Memory::~Memory() {}
@@ -74,9 +66,8 @@ uint8_t PPUMemory::read(uint16_t address) {
     if (address < 0x2000) {
         return console->mapper->read(address);
     } else if (address < 0x3F00) {
-        uint8_t mode = console->cartridge->mirror;
-        return console->ppu
-            ->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE];
+        Mirror mode = console->cartridge->currentMirror();
+        return console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE];
     } else if (address < 0x4000) {
         return console->ppu->readPalette(address % 32);
     } else {
@@ -90,9 +81,8 @@ void PPUMemory::write(uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         console->mapper->write(address, value);
     } else if (address < 0x3F00) {
-        uint8_t mode = console->cartridge->mirror;
-        console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE] =
-            value;
+        Mirror mode = console->cartridge->currentMirror();
+        console->ppu->nameTableData[mirrorAddress(mode, address) % PPU::NAME_TABLE_DATA_SIZE] = value;
     } else if (address < 0x4000) {
         console->ppu->writePalette(address % 32, value);
     } else {
@@ -100,9 +90,9 @@ void PPUMemory::write(uint16_t address, uint8_t value) {
     }
 }
 
-uint16_t Memory::mirrorAddress(uint8_t mode, uint16_t address) {
+uint16_t Memory::mirrorAddress(Mirror mode, uint16_t address) {
     address = (address - 0x2000) % 0x1000;
     uint16_t table = address / 0x0400;
     uint16_t offset = address % 0x0400;
-    return 0x2000 + MirrorLookUp[mode][table] * 0x0400 + offset;
+    return 0x2000 + MirrorLookUp[static_cast<int>(mode)][table] * 0x0400 + offset;
 }

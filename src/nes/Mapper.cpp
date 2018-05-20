@@ -15,7 +15,7 @@ Mapper::~Mapper() {}
 
 Mapper *Mapper::create(Console *console) {
     Cartridge *cartridge = console->cartridge;
-    switch (cartridge->mapper) {
+    switch (cartridge->currentMapper()) {
     case 0:
         return new Mapper2(cartridge);
     case 1:
@@ -31,7 +31,7 @@ Mapper *Mapper::create(Console *console) {
     case 225:
         return new Mapper225(cartridge);
     default:
-        std::printf("error: unsupported mapper %d\n", cartridge->mapper);
+        std::printf("error: unsupported mapper %d\n", cartridge->currentMapper());
         return nullptr;
     }
 }

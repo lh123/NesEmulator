@@ -19,14 +19,14 @@ uint8_t Mapper4::read(uint16_t address) {
     if (address < 0x2000) {
         uint16_t bank = address / 0x0400;
         uint16_t offset = address % 0x0400;
-        return cartridge->chr[chrOffsets[bank] + offset];
+        return cartridge->readCHR(chrOffsets[bank] + offset);
     } else if (address >= 0x8000) {
         address = address - 0x8000;
         uint16_t bank = address / 0x2000;
         uint16_t offset = address % 0x2000;
-        return cartridge->prg[prgOffsets[bank] + offset];
+        return cartridge->readPRG(prgOffsets[bank] + offset);
     } else if (address >= 0x6000) {
-        return cartridge->sram[address - 0x6000];
+        return cartridge->readSRAM(address - 0x6000);
     } else {
         return 0;
     }
@@ -36,11 +36,11 @@ void Mapper4::write(uint16_t address, uint8_t value) {
     if (address < 0x2000) {
         uint16_t bank = address / 0x0400;
         uint16_t offset = address % 0x0400;
-        cartridge->chr[chrOffsets[bank] + offset] = value;
+        cartridge->writeCHR(chrOffsets[bank] + offset, value);
     } else if (address >= 0x8000) {
         writeRegister(address, value);
     } else if (address >= 0x6000) {
-        cartridge->sram[address - 0x6000] = value;
+        cartridge->writeSRAM(address - 0x6000, value);
     }
 }
 
@@ -104,10 +104,10 @@ void Mapper4::writeBankData(uint8_t value) {
 void Mapper4::writeMirror(uint8_t value) {
     switch (value & 0x1) {
     case 0:
-        cartridge->mirror = uint8_t(Mirror::Vertical);
+        cartridge->setMirror(Mirror::Vertical);
         break;
     case 1:
-        cartridge->mirror = uint8_t(Mirror::Horizontal);
+        cartridge->setMirror(Mirror::Horizontal);
         break;
     }
 }
