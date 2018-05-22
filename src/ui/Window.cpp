@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <fstream>
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw_gl3.h>
+#include <imgui.h>
+#include <imgui_impl_glfw_gl3.h>
 
 #include "nes/Controller.h"
 #include "nes/Serialize.hpp"

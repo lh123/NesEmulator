@@ -1,6 +1,6 @@
 #ifndef UI_COMPONENT_H
 #define UI_COMPONENT_H
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 class UIComponent {
 public:
