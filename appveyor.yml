@@ -1,0 +1,57 @@
+version: 1.0.{build}
+branches:
+    only:
+    - master
+image: Visual Studio 2017
+cache:
+- C:/mingw64 -> appveyor.yml
+- C:/glfw-3.2.1.bin.WIN64 -> appveyor.yml
+- C:/SDL2-2.0.8 -> appveyor.yml
+install:
+- ps: |
+    if(-not (Test-Path "C:/mingw64")) {
+        Write-Host "Begin install MinGW-W64"
+        Start-FileDownload "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.4.0/threads-posix/seh/x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z"
+        7z x x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z
+        Remove-Item "./x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z"
+        Move-Item "./mingw64" "C:/"
+    } else {
+        Write-Host "MinGW-W64 has cached"
+    }
+    if(-not (Test-Path "C:/glfw-3.2.1.bin.WIN64")) {
+        Write-Host "Begin install GLFW"
+        Start-FileDownload "https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.bin.WIN64.zip"
+        7z x "glfw-3.2.1.bin.WIN64.zip"
+        Remove-Item "glfw-3.2.1.bin.WIN64.zip"
+        Move-Item "./glfw-3.2.1.bin.WIN64" "C:/"
+    } else {
+        Write-Host "GLFW has cached"
+    }
+    if(-not (Test-Path "C:/SDL2-2.0.8")) {
+        Write-Host "Begin install SDL2"
+        Start-FileDownload "http://www.libsdl.org/release/SDL2-devel-2.0.8-mingw.tar.gz"
+        7z x "SDL2-devel-2.0.8-mingw.tar.gz"
+        7z x "SDL2-devel-2.0.8-mingw.tar"
+        Remove-Item "SDL2-devel-2.0.8-mingw.tar.gz"
+        Remove-Item "SDL2-devel-2.0.8-mingw.tar"
+        Move-Item "./SDL2-2.0.8" "C:/"
+    } else {
+        Write-Host "SDL2 has cached"
+    }
+build_script:
+- ps: |
+    $env:path += ";c:\mingw64\bin;"
+    $gitPath = "C:\Program Files\Git\usr\bin;"
+    $buildPath = "build"
+    $env:path = $env:path.Replace($gitPath, "")
+    if(-not (Test-Path $buildPath)) {
+        mkdir $buildPath
+    }
+    cd $buildPath
+    cmake -DGLFW_ROOT_DIR="C:/glfw-3.2.1.bin.WIN64" -DSDL2_ROOT_DIR="C:/SDL2-2.0.8/x86_64-w64-mingw32" -G "MinGW Makefiles" ..
+    $env:path += $gitPath
+    mingw32-make -j4
+    mingw32-make install
+artifacts:
+- path: build/NesEmulator.exe
+  name: NesEmulator.exe
