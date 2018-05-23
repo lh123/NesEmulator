@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.11)
 
 project(imgui)
 
+set(GLFW_USE_STATIC_LIBS TRUE)
 find_package(GLFW)
 
 if(GLFW_INCLUDE_DIR)
