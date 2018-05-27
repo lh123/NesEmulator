@@ -28,7 +28,7 @@ public:
     void setConnectStateListener(void *userData, ConnectStateListener listener);
 
 private:
-    void sendDataInternal(SOCKET socket, const char *data, int size);
+    bool sendDataInternal(SOCKET socket, const char *data, int size);
     bool recvDataInternal(SOCKET socket, char *data, int size);
 
     void handleAcceptThread();
@@ -44,6 +44,8 @@ private:
     void *mDataRecvUserData;
     ConnectStateListener mConnectListener;
     void *mConnectStateUserData;
+
+    std::mutex mSendMutex;
 };
 
 #endif

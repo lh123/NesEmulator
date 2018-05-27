@@ -45,17 +45,21 @@ bool Client::connect(const char *serverIp, unsigned short port) {
 }
 
 void Client::sendData(GamePacketType type, const char *data, int size) {
+    if (size == 0) {
+        return;
+    }
     if (mIsConnect) {
         GamePacketHead head;
         head.type = type;
         head.size = size;
+        //std::cout << "client send data " << head.size << std::endl;
+        std::lock_guard<std::mutex> lock(mSendMutex);
         sendDataInternal(reinterpret_cast<const char *>(&head), sizeof(GamePacketHead));
         sendDataInternal(data, size);
     }
 }
 
 bool Client::sendDataInternal(const char *data, int size) {
-    std::lock_guard<std::mutex> lock(mSendMutex);
     bool success = true;
     int sendByteSize = 0;
     int errorTimes = 0;
@@ -84,6 +88,7 @@ bool Client::recvDataInternal(char *data, int size) {
             errorTimes++;
             if (errorTimes >= 3) {
                 success = false;
+                std::cout << "Client Recv Error: " << ::WSAGetLastError() << std::endl;
                 break;
             }
         } else {
@@ -117,16 +122,10 @@ void Client::run() {
     if (mConnectListener != nullptr) {
         mConnectListener(mConnectStateUserData, true);
     }
-    size_t bufferSize = BUFFER_SIZE;
-    char *buffer = new char[bufferSize];
+    char *buffer = new char[BUFFER_SIZE];
     GamePacketHead head;
     while (mIsConnect) {
         if (recvDataInternal(reinterpret_cast<char *>(&head), sizeof(GamePacketHead))) {
-            if (head.size > bufferSize) {
-                bufferSize = head.size;
-                delete[] buffer;
-                buffer = new char[bufferSize];
-            }
             if (recvDataInternal(buffer, head.size)) {
                 if (mDataRecvListener != nullptr) {
                     mDataRecvListener(mDataRecvUserData, head, buffer);

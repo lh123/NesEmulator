@@ -3,7 +3,6 @@
 
 #include "nes/Frame.h"
 #include "nes/Controller.h"
-#include "net/FrameCompress.h"
 
 enum class GamePacketType { Pause, Resume, Key, Sync };
 
@@ -25,5 +24,7 @@ struct GameKeyPacket {
 // struct SyncPacket {
 //     char *syncData;
 // };
+
+uint16_t checkSum(const char *data, size_t len);
 
 #endif

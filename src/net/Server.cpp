@@ -66,10 +66,14 @@ void Server::stopServer() {
 bool Server::isRunning() const { return mRunning; }
 
 void Server::sendData(GamePacketType type, const char *data, int size) {
+    if (size == 0) {
+        return;
+    }
     if (mRunning && mClientConnected) {
         GamePacketHead head;
         head.type = type;
         head.size = size;
+        std::lock_guard<std::mutex> lock(mSendMutex);
         sendDataInternal(mClient, reinterpret_cast<const char *>(&head), sizeof(GamePacketHead));
         sendDataInternal(mClient, data, size);
     }
@@ -85,7 +89,8 @@ void Server::setConnectStateListener(void *userData, ConnectStateListener listen
     mConnectListener = listener;
 }
 
-void Server::sendDataInternal(SOCKET socket, const char *data, int size) {
+bool Server::sendDataInternal(SOCKET socket, const char *data, int size) {
+    bool success = true;
     int sendByteSize = 0;
     int errorTimes = 0;
     while (sendByteSize < size) {
@@ -93,13 +98,15 @@ void Server::sendDataInternal(SOCKET socket, const char *data, int size) {
         if (ret == SOCKET_ERROR) {
             errorTimes++;
             if (errorTimes >= 3) {
-                std::cout << "Send Error\n";
+                success = false;
+                std::cout << "Server Send Error: " << ::WSAGetLastError() << std::endl;
                 break;
             }
         } else {
             sendByteSize += ret;
         }
     }
+    return success;
 }
 
 bool Server::recvDataInternal(SOCKET socket, char *data, int size) {
@@ -111,8 +118,8 @@ bool Server::recvDataInternal(SOCKET socket, char *data, int size) {
         if (ret == SOCKET_ERROR) {
             errorTimes++;
             if (errorTimes >= 3) {
-                std::cout << "Recv Error\n";
                 success = false;
+                std::cout << "Server Recv Error: " << ::WSAGetLastError() << std::endl;
                 break;
             }
         } else {
@@ -141,18 +148,12 @@ void Server::handleAcceptThread() {
 
 void Server::handleClientThread() {
     GamePacketHead head;
-    size_t bufferSize = BUFFER_SIZE;
-    char *buffer = new char[bufferSize];
+    char *buffer = new char[BUFFER_SIZE];
     if (mConnectListener != nullptr) {
         mConnectListener(mConnectStateUserData, true);
     }
     while (mClientConnected) {
         if (recvDataInternal(mClient, reinterpret_cast<char *>(&head), sizeof(GamePacketHead))) {
-            if (head.size > bufferSize) {
-                bufferSize = head.size;
-                delete[] buffer;
-                buffer = new char[bufferSize];
-            }
             if (recvDataInternal(mClient, buffer, head.size)) {
                 if (mDataRecvListener != nullptr) {
                     mDataRecvListener(mDataRecvUserData, head, buffer);
