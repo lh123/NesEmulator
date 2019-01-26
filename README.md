@@ -1,4 +1,6 @@
-# Nes模拟器 [![Build status](https://ci.appveyor.com/api/projects/status/1wn3nd2ld3w408ar?svg=true)](https://ci.appveyor.com/project/lh123/nesemulator)
+# Nes模拟器
+
+[![Build status](https://ci.appveyor.com/api/projects/status/1wn3nd2ld3w408ar?svg=true)](https://ci.appveyor.com/project/lh123/nesemulator) [![Build Status](https://dev.azure.com/lh1234/NesEmulator/_apis/build/status/lh123.NesEmulator?branchName=master)](https://dev.azure.com/lh1234/NesEmulator/_build/latest?definitionId=14?branchName=master)
 
 ## 简介
 采用C++编写的一款FC模拟器
