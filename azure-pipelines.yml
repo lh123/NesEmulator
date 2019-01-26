@@ -1,0 +1,54 @@
+trigger:
+- master
+
+pool:
+  vmImage: vs2017-win2016  
+
+steps:
+- script: |
+    choco install -y 7zip
+  displayName: 'Install 7zip'
+
+- bash: |
+    curl -OL "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.4.0/threads-posix/seh/x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z"
+    rm -rf /c/tools/mingw64
+    7z x x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z -o/c/tools
+  displayName: 'Install MinGW-W64'
+
+- bash: |
+    [ -d ‘/c/build-lib‘ ] || mkdir /c/build-lib
+    curl -OL "https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.bin.WIN64.zip"
+    7z x "glfw-3.2.1.bin.WIN64.zip" -o/c/build-lib
+  displayName: 'Install GLFW'
+
+- bash: |
+    [ -d ‘/c/build-lib‘ ] || mkdir /c/build-lib
+    curl -OL "http://www.libsdl.org/release/SDL2-devel-2.0.8-mingw.tar.gz"
+    tar -xvf "SDL2-devel-2.0.8-mingw.tar.gz" -C /c/build-lib
+  displayName: 'Install SDL2'
+
+- bash: |
+    mkdir build
+    cd build
+    mv -v "/c/Program Files/Git/usr/bin/sh.exe" "/c/Program Files/Git/usr/bin/sh-mv.exe"
+    mv -v "/c/Program Files/Git/bin/sh.exe" "/c/Program Files/Git/bin/sh-mv.exe"
+    cmake -DGLFW_ROOT_DIR="/c/build-lib/glfw-3.2.1.bin.WIN64" -DSDL2_ROOT_DIR="/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32" -G "MinGW Makefiles" ..
+  displayName: 'Cmake'
+
+- bash: |
+    mingw32-make
+  workingDirectory: '$(Build.SourcesDirectory)/build'
+  displayName: 'Build'
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)/build'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    Contents: '*.exe'
+  displayName: 'Copy build result'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    ArtifactName: NesEmulator
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+  displayName: 'Publish artifact'
