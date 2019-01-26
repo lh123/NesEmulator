@@ -11,8 +11,7 @@ steps:
 
 - bash: |
     curl -OL "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.4.0/threads-posix/seh/x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z"
-    rm -rf /c/tools/mingw64
-    7z x x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z -o/c/tools
+    7z x x86_64-6.4.0-release-posix-seh-rt_v5-rev0.7z -o/c
   displayName: 'Install MinGW-W64'
 
 - bash: |
@@ -32,6 +31,7 @@ steps:
     cd build
     mv -v "/c/Program Files/Git/usr/bin/sh.exe" "/c/Program Files/Git/usr/bin/sh-mv.exe"
     mv -v "/c/Program Files/Git/bin/sh.exe" "/c/Program Files/Git/bin/sh-mv.exe"
+    PATH="/c/mingw64/bin:$PATH"
     cmake -DGLFW_ROOT_DIR="/c/build-lib/glfw-3.2.1.bin.WIN64" -DSDL2_ROOT_DIR="/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32" -G "MinGW Makefiles" ..
   displayName: 'Cmake'
 
