@@ -16,8 +16,6 @@
 
 #include "net/GameNetProxy.h"
 
-// enum class GameType { Local, Host, Client };
-
 class Window {
 public:
     static constexpr int WIDTH = 256;

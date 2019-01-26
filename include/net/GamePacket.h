@@ -25,6 +25,4 @@ struct GameKeyPacket {
 //     char *syncData;
 // };
 
-uint16_t checkSum(const char *data, size_t len);
-
 #endif

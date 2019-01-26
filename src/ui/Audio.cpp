@@ -17,9 +17,6 @@ void fillAudio(void *udata, uint8_t *stream, int len) {
         for (int i = fillLength; i < maxlen; i++) {
             audioBuffer[i] = fillValue;
         }
-        if (audio->mListener != nullptr && fillLength > 0) {
-            audio->mListener(audioBuffer, fillLength);
-        }
     }
 }
 
@@ -66,5 +63,3 @@ void Audio::pause() {
 void Audio::close() { SDL_Quit(); }
 
 void Audio::setAudioBuffer(AudioBuffer *buffer) { mAudioBuffer = buffer; }
-
-void Audio::setOnFillAudioListener(FillAudioListener listener) { mListener = listener; }
