@@ -10,7 +10,7 @@ env:
   MSYS2_SHELL: "C:\\msys64\\usr\\bin\bash"
   MSYSTEM: "MINGW64"
   CHERE_INVOKING: "true"
-  PATH: "${{env.PATH}};C:\\msys64\\mingw64\\bin"
+  PATH: "${{ env.PATH }};C:\\msys64\\mingw64\\bin"
   
 # Controls when the action will run. 
 on:
