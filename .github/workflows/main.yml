@@ -37,6 +37,7 @@ jobs:
       - name: "Install Environment"
         run: |
           %MSYS2_SHELL% -lc "pacman -Syu --noconfirm"
+          %MSYS2_SHELL% -lc "pacman -Syu --noconfirm"
           %MSYS2_SHELL% -lc "pacman -S unzip mingw-w64-x86_64-binutils mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-cmake --noconfirm"
           %MSYS2_SHELL% -lc "mkdir /c/build-lib"
 
@@ -59,4 +60,4 @@ jobs:
 
       - name: "Build"
         run: |
-          %MSYS2_SHELL% -lc "cd /c/build-lib && mingw32-make"
+          %MSYS2_SHELL% -lc "cd build && mingw32-make"
