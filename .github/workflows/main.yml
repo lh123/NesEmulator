@@ -55,7 +55,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: "Cmake"
         run: |
-          %MSYS2_SHELL% -lc "cd /c/build-lib && cmake -DGLFW_ROOT_DIR=\"/c/build-lib/glfw-3.2.1.bin.WIN64\" -DSDL2_ROOT_DIR=\"/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32\" -G \"MinGW Makefiles\" .."
+          %MSYS2_SHELL% -lc "mkdir build && cd build && cmake -DGLFW_ROOT_DIR=\"/c/build-lib/glfw-3.2.1.bin.WIN64\" -DSDL2_ROOT_DIR=\"/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32\" -G \"MinGW Makefiles\" .."
 
       - name: "Build"
         run: |
