@@ -10,7 +10,6 @@ env:
   MSYS2_SHELL: "C:\\msys64\\usr\\bin\bash"
   MSYSTEM: "MINGW64"
   CHERE_INVOKING: "true"
-  PATH: "${{ env.PATH }};C:\\msys64\\mingw64\\bin"
   
 # Controls when the action will run. 
 on:
@@ -59,9 +58,11 @@ jobs:
         run: |
           mkdir build
           cd build
+          set PATH=%PATH%;C:\msys64\mingw64\bin
           cmake -DGLFW_ROOT_DIR="/c/build-lib/glfw-3.2.1.bin.WIN64" -DSDL2_ROOT_DIR="/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32" -G "MinGW Makefiles" ..
 
       - name: "Build"
         run: |
           cd build
+          set PATH=%PATH%;C:\msys64\mingw64\bin
           mingw32-make
