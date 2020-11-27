@@ -61,3 +61,9 @@ jobs:
       - name: "Build"
         run: |
           %MSYS2_SHELL% -lc "cd build && mingw32-make"
+          
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.1
+        with:
+          name: NesEmulator
+          path: ${{ github.workspace }}/build/NesEmulator.exe
