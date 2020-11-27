@@ -7,9 +7,9 @@ defaults:
     shell: cmd
 
 env:
-  MSYS2_SHELL: C:\msys64\usr\bin\bash.exe
-  MSYSTEM: MINGW64
-  CHERE_INVOKING: true
+  MSYS2_SHELL: "C:\\msys64\\usr\\bin\\bash.exe"
+  MSYSTEM: "MINGW64"
+  CHERE_INVOKING: "true"
   
 # Controls when the action will run. 
 on:
@@ -37,8 +37,8 @@ jobs:
       - name: "Install Environment"
         run: |
           %MSYS2_SHELL% -lc "pacman -Syu"
-          %MSYS2_SHELL% -lc "pacman -S unzip mingw-w64-x86_64-toolchain"
-          %MSYS2_SHELL% -lc "[ -d \"/c/build-lib\"] || mkdir /c/build-lib"
+          %MSYS2_SHELL% -lc "pacman -S unzip mingw-w64-x86_64-binutils mingw-w64-x86_64-gcc mingw-w64-x86_64-make mingw-w64-x86_64-cmake"
+          %MSYS2_SHELL% -lc "mkdir /c/build-lib"
 
       # Runs a single command using the runners shell
       - name: "Install GLFW"
@@ -49,20 +49,14 @@ jobs:
           
       - name: "Install SDL2"
         run: |
-          cd C:\\build-lib
-          %MSYS2_SHELL% -lc "curl -OL \"http://www.libsdl.org/release/SDL2-devel-2.0.8-mingw.tar.gz\""
-          %MSYS2_SHELL% -lc "tar -xvf \"SDL2-devel-2.0.8-mingw.tar.gz\" -C /c/build-lib"
+          %MSYS2_SHELL% -lc "cd /c/build-lib && curl -OL \"http://www.libsdl.org/release/SDL2-devel-2.0.8-mingw.tar.gz\""
+          %MSYS2_SHELL% -lc "cd /c/build-lib && tar -xvf \"SDL2-devel-2.0.8-mingw.tar.gz\" -C /c/build-lib"
 
       # Runs a set of commands using the runners shell
       - name: "Cmake"
         run: |
-          mkdir build
-          cd build
-          set PATH=%PATH%;C:\msys64\mingw64\bin
-          cmake -DGLFW_ROOT_DIR="/c/build-lib/glfw-3.2.1.bin.WIN64" -DSDL2_ROOT_DIR="/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32" -G "MinGW Makefiles" ..
+          %MSYS2_SHELL% -lc "cd /c/build-lib && cmake -DGLFW_ROOT_DIR=\"/c/build-lib/glfw-3.2.1.bin.WIN64\" -DSDL2_ROOT_DIR=\"/c/build-lib/SDL2-2.0.8/x86_64-w64-mingw32\" -G \"MinGW Makefiles\" .."
 
       - name: "Build"
         run: |
-          cd build
-          set PATH=%PATH%;C:\msys64\mingw64\bin
-          mingw32-make
+          %MSYS2_SHELL% -lc "cd /c/build-lib && mingw32-make"
