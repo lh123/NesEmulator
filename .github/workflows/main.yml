@@ -7,9 +7,9 @@ defaults:
     shell: cmd
 
 env:
-  MSYS2_SHELL: "C:\\msys64\\usr\\bin\bash"
-  MSYSTEM: "MINGW64"
-  CHERE_INVOKING: "true"
+  MSYS2_SHELL: C:\msys64\usr\bin\bash.exe
+  MSYSTEM: MINGW64
+  CHERE_INVOKING: true
   
 # Controls when the action will run. 
 on:
