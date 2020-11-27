@@ -5,6 +5,7 @@
 #include "ui/UIComponent.h"
 #include <functional>
 #include <vector>
+#include <string>
 
 class JoinServerView : public UIComponent {
 public:
